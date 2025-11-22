@@ -35,12 +35,14 @@ import {
   query,
   orderBy,
   addDoc,
-  serverTimestamp
+  serverTimestamp,
+  updateDoc
 } from 'firebase/firestore';
 import { translateWord } from './services/translation';
 import { generateStory } from './services/gemini';
 
 import FlashcardView from './components/FlashcardView';
+import LibraryView from './components/LibraryView';
 import { isDue } from './services/srs';
 import { useTTS } from './hooks/useTTS';
 
@@ -276,6 +278,27 @@ function AuthenticatedApp() {
     await setDoc(vocabRef, { definition: def }, { merge: true });
   };
 
+  const handleDeleteText = async (textId) => {
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'texts', textId));
+    } catch (error) {
+      console.error("Error deleting text:", error);
+      alert("Failed to delete text.");
+    }
+  };
+
+  const handleToggleRead = async (textId, isRead) => {
+    if (!currentUser) return;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.uid, 'texts', textId), {
+        isRead: isRead
+      });
+    } catch (error) {
+      console.error("Error updating read status:", error);
+    }
+  };
+
   // --- VIEWS ---
 
   const GeneratorView = () => {
@@ -417,51 +440,54 @@ function AuthenticatedApp() {
     );
   };
 
-  const LibraryView = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-slate-800">Your Library</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={seedLibrary}
-            className="flex items-center gap-2 bg-white text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition"
-          >
-            <Plus size={18} /> Seed Samples
-          </button>
-          <button
-            onClick={() => setView('add')}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
-          >
-            <Plus size={18} /> Add Text
-          </button>
-        </div>
-      </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {texts.map(text => (
-          <div
-            key={text.id}
-            onClick={() => { setActiveTextId(text.id); setView('reader'); setShowQuiz(false); }}
-            className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-300 cursor-pointer transition group"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <span className={`px-2 py-1 rounded text-xs font-bold ${text.level === 'A2' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                {text.level}
-              </span>
-              <BookOpen size={20} className="text-slate-400 group-hover:text-indigo-500" />
-            </div>
-            <h3 className="font-bold text-lg text-slate-800 mb-2">{text.title}</h3>
-            <p className="text-slate-500 text-sm line-clamp-3">{text.content}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 
   const ReaderView = () => {
     if (!activeText) return null;
     const tokens = tokenize(activeText.content);
     const [selection, setSelection] = useState(null);
+    const [ollamaModels, setOllamaModels] = useState([]);
+    const [selectedOllamaModel, setSelectedOllamaModel] = useState('');
+    const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+
+    useEffect(() => {
+      if (showQuiz) {
+        import('./services/ollama').then(({ fetchModels }) => {
+          fetchModels().then(models => {
+            setOllamaModels(models);
+            if (models.length > 0) setSelectedOllamaModel(models[0].name);
+          });
+        });
+      }
+    }, [showQuiz]);
+
+    const handleGenerateQuestions = async () => {
+      if (!selectedOllamaModel) return;
+      setIsGeneratingQuestions(true);
+      try {
+        const { generateComprehensionQuestions } = await import('./services/ollama');
+        const newQuestions = await generateComprehensionQuestions(selectedOllamaModel, activeText.content);
+
+        // Update local state and Firestore
+        const updatedText = { ...activeText, questions: [...(activeText.questions || []), ...newQuestions] };
+
+        // Optimistic update (if we had a setTexts, but we rely on Firestore sync usually)
+        // For immediate feedback we might want to update local state if possible, but let's just write to DB
+
+        if (currentUser) {
+          const textRef = doc(db, 'users', currentUser.uid, 'texts', activeText.id);
+          await updateDoc(textRef, {
+            questions: updatedText.questions
+          });
+        }
+
+      } catch (error) {
+        console.error("Failed to generate questions:", error);
+        alert(`Failed to generate questions: ${error.message}`);
+      } finally {
+        setIsGeneratingQuestions(false);
+      }
+    };
 
     const handleSelection = () => {
       const selectedText = window.getSelection().toString().trim();
@@ -554,10 +580,34 @@ function AuthenticatedApp() {
         <div className="p-8 md:p-12 flex-grow overflow-y-auto">
           {showQuiz ? (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <h3 className="text-xl font-bold flex items-center gap-2 mb-4">
-                <Brain className="text-indigo-600" /> Comprehension Check
-              </h3>
-              {activeText.questions.length > 0 ? activeText.questions.map((q, idx) => (
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold flex items-center gap-2">
+                  <Brain className="text-indigo-600" /> Comprehension Check
+                </h3>
+
+                {/* Generator Controls */}
+                <div className="flex gap-2 items-center">
+                  {ollamaModels.length > 0 && (
+                    <select
+                      value={selectedOllamaModel}
+                      onChange={(e) => setSelectedOllamaModel(e.target.value)}
+                      className="text-sm p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
+                    </select>
+                  )}
+                  <button
+                    onClick={handleGenerateQuestions}
+                    disabled={isGeneratingQuestions || ollamaModels.length === 0}
+                    className="text-sm bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-200 transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isGeneratingQuestions ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    Generate
+                  </button>
+                </div>
+              </div>
+
+              {activeText.questions && activeText.questions.length > 0 ? activeText.questions.map((q, idx) => (
                 <div key={idx} className="bg-slate-50 p-6 rounded-lg border border-slate-200">
                   <p className="font-semibold text-slate-800 mb-3">{q.q}</p>
                   <details className="text-slate-600">
@@ -568,7 +618,21 @@ function AuthenticatedApp() {
                   </details>
                 </div>
               )) : (
-                <p className="text-slate-500 italic">No questions available for this text.</p>
+                <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <Brain className="mx-auto text-slate-300 mb-3" size={48} />
+                  <p className="text-slate-500 italic mb-4">No questions available for this text.</p>
+                  {ollamaModels.length > 0 ? (
+                    <button
+                      onClick={handleGenerateQuestions}
+                      disabled={isGeneratingQuestions}
+                      className="text-indigo-600 font-medium hover:underline"
+                    >
+                      Generate some with AI?
+                    </button>
+                  ) : (
+                    <p className="text-xs text-slate-400">Make sure Ollama is running to generate questions.</p>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -833,7 +897,17 @@ function AuthenticatedApp() {
       {/* Main Content Area */}
       <main className="pb-20 pt-8 px-4 md:pl-28 md:pr-8 md:pb-8 max-w-6xl mx-auto h-screen overflow-hidden">
         <div className="h-full overflow-y-auto custom-scrollbar">
-          {view === 'library' && <LibraryView />}
+          {view === 'library' && (
+            <LibraryView
+              texts={texts}
+              savedVocab={savedVocab}
+              onSelect={(id) => { setActiveTextId(id); setView('reader'); setShowQuiz(false); }}
+              onDelete={handleDeleteText}
+              onToggleRead={handleToggleRead}
+              onSeed={seedLibrary}
+              onAdd={() => setView('add')}
+            />
+          )}
           {view === 'reader' && <ReaderView />}
           {view === 'vocab' && <VocabView />}
           {view === 'add' && <AddTextView />}
