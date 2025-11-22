@@ -14,20 +14,27 @@ export default function FlashcardView() {
     const [sessionComplete, setSessionComplete] = useState(false);
 
     useEffect(() => {
+        console.log("FlashcardView mounted. CurrentUser:", currentUser?.uid);
         fetchDueCards();
     }, [currentUser]);
 
     const fetchDueCards = async () => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            console.log("No current user in FlashcardView");
+            return;
+        }
         setLoading(true);
         try {
+            console.log("Fetching vocab for flashcards...");
             const vocabRef = collection(db, 'users', currentUser.uid, 'vocab');
             const snapshot = await getDocs(vocabRef);
 
             const allVocab = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("Fetched vocab count:", allVocab.length);
 
             // Filter for due cards
             const due = allVocab.filter(word => isDue(word.srs));
+            console.log("Due cards count:", due.length);
 
             // Shuffle slightly or sort by priority? For now, random shuffle or just list
             setDueCards(due);
@@ -120,6 +127,7 @@ export default function FlashcardView() {
             </div>
 
             <Flashcard
+                key={currentCard.id}
                 word={currentCard}
                 onGrade={handleGrade}
             />

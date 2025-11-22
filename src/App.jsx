@@ -37,6 +37,8 @@ import {
 import { translateWord } from './services/translation';
 import { generateStory } from './services/gemini';
 import FirestoreTest from './components/FirestoreTest';
+import FlashcardView from './components/FlashcardView';
+import { isDue } from './services/srs';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---
 const INITIAL_TEXTS = [
@@ -143,6 +145,7 @@ function AuthenticatedApp() {
   }, [currentUser]);
 
   // --- HELPERS ---
+  const dueCount = Object.values(savedVocab).filter(word => isDue(word.srs)).length;
   const activeText = texts.find(t => t.id === activeTextId);
 
   // Tokenize text to preserve punctuation but make words clickable
@@ -720,6 +723,19 @@ function AuthenticatedApp() {
           <Highlighter className="mx-auto" size={24} /> Vocab
         </button>
 
+        <button
+          onClick={() => setView('flashcards')}
+          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition relative ${view === 'flashcards' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <Brain className="mx-auto" size={24} />
+          Cards
+          {dueCount > 0 && (
+            <span className="absolute top-0 right-2 md:right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+              {dueCount}
+            </span>
+          )}
+        </button>
+
         <div className="hidden md:block mt-auto mb-8 text-center space-y-4">
           <div className="flex justify-center" title={isSyncing ? "Syncing to cloud..." : "Saved to cloud"}>
             {isSyncing ? (
@@ -746,6 +762,7 @@ function AuthenticatedApp() {
           {view === 'vocab' && <VocabView />}
           {view === 'add' && <AddTextView />}
           {view === 'generator' && <GeneratorView />}
+          {view === 'flashcards' && <FlashcardView />}
           {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} />}
           {view === 'book_detail' && (
             <BookDetailView
