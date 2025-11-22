@@ -82,13 +82,13 @@ export default function BookDetailView({ book, setView, setActiveBook, setChapte
 
                     <div className="space-y-3">
                         {book.chapters?.map((chapter, index) => {
-                            const isCompleted = progress.completedChapters?.includes(chapter.id);
+                            const isCompleted = progress.completedChapters?.includes(chapter.id || chapter.number);
                             const isCurrent = chapter.number === progress.currentChapter;
                             const isLocked = !isCompleted && !isCurrent && false; // Temporarily disabled lock
 
                             return (
                                 <div
-                                    key={chapter.id}
+                                    key={chapter.id || chapter.number}
                                     onClick={() => !isLocked && handleChapterClick(chapter)}
                                     className={`flex items-center p-4 rounded-xl border transition cursor-pointer
                                 ${isCurrent ? 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'}

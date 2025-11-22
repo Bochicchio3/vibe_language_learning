@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BooksView from './components/BooksView';
+import BookDetailView from './components/BookDetailView';
+import ChapterReader from './components/ChapterReader';
 import {
   BookOpen,
   Highlighter,
@@ -86,6 +88,7 @@ function AuthenticatedApp() {
   const [texts, setTexts] = useState([]);
   const [activeTextId, setActiveTextId] = useState(null);
   const [activeBook, setActiveBook] = useState(null); // New state for active book
+  const [activeChapter, setActiveChapter] = useState(null); // New state for active chapter
   const [savedVocab, setSavedVocab] = useState({}); // format: {"word": {definition: "", context: "" } }
   const [showQuiz, setShowQuiz] = useState(false);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
@@ -752,7 +755,15 @@ function AuthenticatedApp() {
               setChapter={setActiveChapter}
             />
           )}
-          {view === 'chapter_reader' && <div className="p-8">Chapter Reader: {activeChapter?.title}</div>}
+          {view === 'chapter_reader' && (
+            <ChapterReader
+              chapter={activeChapter}
+              book={activeBook}
+              setView={setView}
+              setChapter={setActiveChapter}
+              setActiveBook={setActiveBook}
+            />
+          )}
         </div>
       </main>
 
