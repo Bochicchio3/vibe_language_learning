@@ -39,7 +39,7 @@ import {
 } from 'firebase/firestore';
 import { translateWord } from './services/translation';
 import { generateStory } from './services/gemini';
-import FirestoreTest from './components/FirestoreTest';
+
 import FlashcardView from './components/FlashcardView';
 import { isDue } from './services/srs';
 import { useTTS } from './hooks/useTTS';
@@ -869,8 +869,7 @@ function AuthenticatedApp() {
         .backface-hidden { backface-visibility: hidden; }
         .rotate-y-180 { transform: rotateY(180deg); }
       `}</style>
-      <FirestoreTest />
-      <FirestoreTest />
+
       <ChatWidget
         isOpen={chatWidgetOpen}
         setIsOpen={setChatWidgetOpen}
