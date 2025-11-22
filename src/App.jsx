@@ -97,6 +97,7 @@ function AuthenticatedApp() {
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [translatingWord, setTranslatingWord] = useState(null); // Track which word is being translated
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false); // Track if TTS is active
   const { logout, currentUser } = useAuth();
 
   // --- FIRESTORE SYNC ---
@@ -143,6 +144,16 @@ function AuthenticatedApp() {
       unsubscribeVocab();
     };
   }, [currentUser]);
+
+  // Cancel speech when navigating away from reader/chapter
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      }
+    };
+  }, [view]);
 
   // --- HELPERS ---
   const dueCount = Object.values(savedVocab).filter(word => isDue(word.srs)).length;
@@ -208,10 +219,24 @@ function AuthenticatedApp() {
 
   const speakText = (text) => {
     if ('speechSynthesis' in window) {
+      // If already speaking, stop it
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        return;
+      }
+
+      // Start speaking
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'de-DE';
       utterance.rate = 0.9;
+      
+      // Listen for when speech ends
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      
+      setIsSpeaking(true);
       window.speechSynthesis.speak(utterance);
     } else {
       alert("Browser does not support Text-to-Speech");
@@ -471,8 +496,12 @@ function AuthenticatedApp() {
           <div className="flex gap-2">
             <button
               onClick={() => speakText(activeText.content)}
-              className="p-2 hover:bg-slate-200 rounded-full text-slate-700"
-              title="Read Aloud"
+              className={`p-2 rounded-full transition ${
+                isSpeaking 
+                  ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+                  : 'hover:bg-slate-200 text-slate-700'
+              }`}
+              title={isSpeaking ? "Stop Reading" : "Read Aloud"}
             >
               <Volume2 size={20} />
             </button>
