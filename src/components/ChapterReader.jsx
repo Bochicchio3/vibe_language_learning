@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Volume2, Brain, Loader2, CheckCircle, ArrowRight } from 'lucide-react';
+import { ChevronLeft, Volume2, Brain, Loader2, CheckCircle, ArrowRight, MessageCircle } from 'lucide-react';
 import { doc, updateDoc, arrayUnion, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { translateWord } from '../services/translation';
 
-export default function ChapterReader({ chapter, book, setView, setChapter, setActiveBook }) {
+export default function ChapterReader({ chapter, book, setView, setChapter, setActiveBook, setChatWidgetOpen, setChatInitialMessage }) {
     const { currentUser } = useAuth();
     const [savedVocab, setSavedVocab] = useState({});
     const [translatingWord, setTranslatingWord] = useState(null);
     const [showQuiz, setShowQuiz] = useState(false);
     const [completing, setCompleting] = useState(false);
+    const [selection, setSelection] = useState(null);
 
     // Load saved vocab (simplified - ideally passed from parent or context to avoid refetching)
     useEffect(() => {
@@ -32,6 +33,30 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
             utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
         }
+    };
+
+    const handleSelection = () => {
+        const selectedText = window.getSelection().toString().trim();
+        if (selectedText.length > 0) {
+            const selectionRange = window.getSelection().getRangeAt(0);
+            const rect = selectionRange.getBoundingClientRect();
+            setSelection({
+                text: selectedText,
+                top: rect.top,
+                left: rect.left + rect.width / 2
+            });
+        } else {
+            setSelection(null);
+        }
+    };
+
+    const handleAskAI = (e) => {
+        e.stopPropagation();
+        if (!selection) return;
+        setChatInitialMessage(`Explain this: "${selection.text}"`);
+        setChatWidgetOpen(true);
+        setSelection(null);
+        window.getSelection().removeAllRanges();
     };
 
     const toggleWord = async (originalToken, sentence) => {
@@ -102,7 +127,25 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
     const tokens = tokenize(chapter.content);
 
     return (
-        <div className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col">
+        <div
+            className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col relative"
+            onMouseUp={handleSelection}
+        >
+            {/* Selection Popup */}
+            {selection && (
+                <div
+                    className="fixed z-50 -translate-x-1/2 -translate-y-full mb-2"
+                    style={{ top: selection.top, left: selection.left }}
+                >
+                    <button
+                        onClick={handleAskAI}
+                        className="bg-indigo-600 text-white text-sm font-bold py-2 px-4 rounded-full shadow-lg hover:bg-indigo-700 flex items-center gap-2 animate-in fade-in zoom-in duration-200"
+                    >
+                        <MessageCircle size={16} /> Ask AI
+                    </button>
+                    <div className="w-3 h-3 bg-indigo-600 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1.5"></div>
+                </div>
+            )}
             {/* Toolbar */}
             <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-10">
                 <button
@@ -139,11 +182,12 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                         return (
                             <span
                                 key={index}
-                                onClick={() => toggleWord(cleanToken, "Context from book")} // Context extraction could be improved
-                                className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
-                            ${isSaved ? 'bg-amber-200 text-amber-900' : 'hover:bg-indigo-100'}
-                            ${isTranslating ? 'opacity-70' : ''}
-                        `}
+                                onClick={() => toggleWord(cleanToken, chapter.content)}
+                                className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5
+                            ${isSaved
+                                        ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
+                                        : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                            ${isTranslating ? 'opacity-70 cursor-wait' : ''}`}
                             >
                                 {token}
                                 {isTranslating && <Loader2 size={12} className="animate-spin" />}

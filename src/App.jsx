@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import BooksView from './components/BooksView';
 import BookDetailView from './components/BookDetailView';
 import ChapterReader from './components/ChapterReader';
+import ChatView from './components/ChatView';
+import ChatWidget from './components/ChatWidget';
 import {
   BookOpen,
   Highlighter,
@@ -18,7 +20,8 @@ import {
   LogOut,
   Loader2,
   Sparkles,
-  Book // Import Book icon
+  Book, // Import Book icon
+  MessageCircle
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginView from './components/LoginView';
@@ -97,6 +100,8 @@ function AuthenticatedApp() {
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [translatingWord, setTranslatingWord] = useState(null); // Track which word is being translated
   const [isSyncing, setIsSyncing] = useState(false);
+  const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
+  const [chatInitialMessage, setChatInitialMessage] = useState('');
   const { logout, currentUser } = useAuth();
 
   // --- FIRESTORE SYNC ---
@@ -460,9 +465,53 @@ function AuthenticatedApp() {
   const ReaderView = () => {
     if (!activeText) return null;
     const tokens = tokenize(activeText.content);
+    const [selection, setSelection] = useState(null);
+
+    const handleSelection = () => {
+      const selectedText = window.getSelection().toString().trim();
+      if (selectedText.length > 0) {
+        const selectionRange = window.getSelection().getRangeAt(0);
+        const rect = selectionRange.getBoundingClientRect();
+        setSelection({
+          text: selectedText,
+          top: rect.top,
+          left: rect.left + rect.width / 2
+        });
+      } else {
+        setSelection(null);
+      }
+    };
+
+    const handleAskAI = (e) => {
+      e.stopPropagation();
+      if (!selection) return;
+      setChatInitialMessage(`Explain this: "${selection.text}"`);
+      setChatWidgetOpen(true);
+      setSelection(null);
+      window.getSelection().removeAllRanges();
+    };
 
     return (
-      <div className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col">
+      <div
+        className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col relative"
+        onMouseUp={handleSelection}
+      >
+        {/* Selection Popup */}
+        {selection && (
+          <div
+            className="fixed z-50 -translate-x-1/2 -translate-y-full mb-2"
+            style={{ top: selection.top, left: selection.left }}
+          >
+            <button
+              onClick={handleAskAI}
+              className="bg-indigo-600 text-white text-sm font-bold py-2 px-4 rounded-full shadow-lg hover:bg-indigo-700 flex items-center gap-2 animate-in fade-in zoom-in duration-200"
+            >
+              <MessageCircle size={16} /> Ask AI
+            </button>
+            <div className="w-3 h-3 bg-indigo-600 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1.5"></div>
+          </div>
+        )}
+
         {/* Toolbar */}
         <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-10">
           <button onClick={() => setView('library')} className="text-slate-500 hover:text-slate-800 flex items-center gap-1">
@@ -523,7 +572,7 @@ function AuthenticatedApp() {
                     <span
                       key={index}
                       onClick={() => toggleWord(cleanToken)}
-                      className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
+                      className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5
                         ${isSaved
                           ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
                           : 'hover:bg-indigo-100 active:bg-indigo-200'}
@@ -716,6 +765,14 @@ function AuthenticatedApp() {
         >
           <Sparkles className="mx-auto" size={24} /> Generator
         </button>
+
+        <button
+          onClick={() => setView('chat')}
+          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'chat' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <MessageCircle className="mx-auto" size={24} /> Chat
+        </button>
+
         <button
           onClick={() => setView('vocab')}
           className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'vocab' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
@@ -762,6 +819,7 @@ function AuthenticatedApp() {
           {view === 'vocab' && <VocabView />}
           {view === 'add' && <AddTextView />}
           {view === 'generator' && <GeneratorView />}
+          {view === 'chat' && <ChatView />}
           {view === 'flashcards' && <FlashcardView />}
           {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} />}
           {view === 'book_detail' && (
@@ -779,6 +837,8 @@ function AuthenticatedApp() {
               setView={setView}
               setChapter={setActiveChapter}
               setActiveBook={setActiveBook}
+              setChatWidgetOpen={setChatWidgetOpen}
+              setChatInitialMessage={setChatInitialMessage}
             />
           )}
         </div>
@@ -791,6 +851,12 @@ function AuthenticatedApp() {
         .rotate-y-180 { transform: rotateY(180deg); }
       `}</style>
       <FirestoreTest />
+      <FirestoreTest />
+      <ChatWidget
+        isOpen={chatWidgetOpen}
+        setIsOpen={setChatWidgetOpen}
+        initialMessage={chatInitialMessage}
+      />
     </div>
   );
 }
