@@ -4,9 +4,11 @@ import { doc, updateDoc, arrayUnion, serverTimestamp, setDoc, getDoc } from 'fir
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { translateWord } from '../services/translation';
+import { useTTS } from '../hooks/useTTS';
 
 export default function ChapterReader({ chapter, book, setView, setChapter, setActiveBook }) {
     const { currentUser } = useAuth();
+    const { speak, cancel, isSpeaking, currentSpeechIndex } = useTTS();
     const [savedVocab, setSavedVocab] = useState({});
     const [translatingWord, setTranslatingWord] = useState(null);
     const [showQuiz, setShowQuiz] = useState(false);
@@ -24,13 +26,11 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         return str.split(/([^\wäöüÄÖÜß]+)/);
     };
 
-    const speakText = (text) => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'de-DE';
-            utterance.rate = 0.9;
-            window.speechSynthesis.speak(utterance);
+    const handleSpeak = () => {
+        if (isSpeaking) {
+            cancel();
+        } else {
+            speak(chapter.content);
         }
     };
 
@@ -101,6 +101,14 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
 
     const tokens = tokenize(chapter.content);
 
+    // Calculate cumulative lengths for mapping charIndex to token
+    let charCount = 0;
+    const tokenRanges = tokens.map(token => {
+        const start = charCount;
+        charCount += token.length;
+        return { start, end: charCount };
+    });
+
     return (
         <div className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col">
             {/* Toolbar */}
@@ -116,11 +124,11 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                 </div>
                 <div className="flex gap-2">
                     <button
-                        onClick={() => speakText(chapter.content)}
-                        className="p-2 hover:bg-slate-200 rounded-full text-slate-700"
-                        title="Read Aloud"
+                        onClick={handleSpeak}
+                        className={`p-2 rounded-full transition-colors ${isSpeaking ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                        title={isSpeaking ? "Stop Reading" : "Read Aloud"}
                     >
-                        <Volume2 size={20} />
+                        <Volume2 size={20} className={isSpeaking ? "animate-pulse" : ""} />
                     </button>
                 </div>
             </div>
@@ -134,14 +142,18 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                         const isWord = /\w/.test(token);
                         const isSaved = savedVocab[cleanToken];
 
-                        if (!isWord) return <span key={index}>{token}</span>;
+                        // Check if this token is currently being spoken
+                        const range = tokenRanges[index];
+                        const isCurrentSpeech = isSpeaking && currentSpeechIndex >= range.start && currentSpeechIndex < range.end;
+
+                        if (!isWord) return <span key={index} className={isCurrentSpeech ? "bg-yellow-200" : ""}>{token}</span>;
 
                         return (
                             <span
                                 key={index}
                                 onClick={() => toggleWord(cleanToken, "Context from book")} // Context extraction could be improved
                                 className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
-                            ${isSaved ? 'bg-amber-200 text-amber-900' : 'hover:bg-indigo-100'}
+                            ${isCurrentSpeech ? 'bg-yellow-200' : (isSaved ? 'bg-amber-200 text-amber-900' : 'hover:bg-indigo-100')}
                             ${isTranslating ? 'opacity-70' : ''}
                         `}
                             >
@@ -160,6 +172,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                             </span>
                         );
                     })}
+
                 </div>
             </div>
 
@@ -174,6 +187,6 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                     Complete & Next Chapter <ArrowRight size={18} />
                 </button>
             </div>
-        </div>
+        </div >
     );
 }

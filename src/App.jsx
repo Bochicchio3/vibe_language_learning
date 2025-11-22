@@ -39,6 +39,7 @@ import { generateStory } from './services/gemini';
 import FirestoreTest from './components/FirestoreTest';
 import FlashcardView from './components/FlashcardView';
 import { isDue } from './services/srs';
+import { useTTS } from './hooks/useTTS';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---
 const INITIAL_TEXTS = [
@@ -97,7 +98,7 @@ function AuthenticatedApp() {
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [translatingWord, setTranslatingWord] = useState(null); // Track which word is being translated
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false); // Track if TTS is active
+  const { speak, cancel, isSpeaking, currentSpeechIndex } = useTTS();
   const { logout, currentUser } = useAuth();
 
   // --- FIRESTORE SYNC ---
@@ -146,14 +147,10 @@ function AuthenticatedApp() {
   }, [currentUser]);
 
   // Cancel speech when navigating away from reader/chapter
+  // Cancel speech when navigating away from reader/chapter
   useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-      }
-    };
-  }, [view]);
+    cancel();
+  }, [view, cancel]);
 
   // --- HELPERS ---
   const dueCount = Object.values(savedVocab).filter(word => isDue(word.srs)).length;
@@ -214,32 +211,6 @@ function AuthenticatedApp() {
       } finally {
         setTranslatingWord(null);
       }
-    }
-  };
-
-  const speakText = (text) => {
-    if ('speechSynthesis' in window) {
-      // If already speaking, stop it
-      if (isSpeaking) {
-        window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-        return;
-      }
-
-      // Start speaking
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'de-DE';
-      utterance.rate = 0.9;
-      
-      // Listen for when speech ends
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      
-      setIsSpeaking(true);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      alert("Browser does not support Text-to-Speech");
     }
   };
 
@@ -486,6 +457,22 @@ function AuthenticatedApp() {
     if (!activeText) return null;
     const tokens = tokenize(activeText.content);
 
+    // Calculate cumulative lengths for mapping charIndex to token
+    let charCount = 0;
+    const tokenRanges = tokens.map(token => {
+      const start = charCount;
+      charCount += token.length;
+      return { start, end: charCount };
+    });
+
+    const handleSpeak = () => {
+      if (isSpeaking) {
+        cancel();
+      } else {
+        speak(activeText.content);
+      }
+    };
+
     return (
       <div className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col">
         {/* Toolbar */}
@@ -495,12 +482,11 @@ function AuthenticatedApp() {
           </button>
           <div className="flex gap-2">
             <button
-              onClick={() => speakText(activeText.content)}
-              className={`p-2 rounded-full transition ${
-                isSpeaking 
-                  ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' 
+              onClick={handleSpeak}
+              className={`p-2 rounded-full transition ${isSpeaking
+                  ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 animate-pulse'
                   : 'hover:bg-slate-200 text-slate-700'
-              }`}
+                }`}
               title={isSpeaking ? "Stop Reading" : "Read Aloud"}
             >
               <Volume2 size={20} />
@@ -546,16 +532,20 @@ function AuthenticatedApp() {
                   const isTranslating = translatingWord === cleanToken;
                   const isWord = /\w/.test(token); // Simple check if it's a word
 
-                  if (!isWord) return <span key={index}>{token}</span>;
+                  // Check if this token is currently being spoken
+                  const range = tokenRanges[index];
+                  const isCurrentSpeech = isSpeaking && currentSpeechIndex >= range.start && currentSpeechIndex < range.end;
+
+                  if (!isWord) return <span key={index} className={isCurrentSpeech ? "bg-yellow-200" : ""}>{token}</span>;
 
                   return (
                     <span
                       key={index}
                       onClick={() => toggleWord(cleanToken)}
                       className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
-                        ${isSaved
+                        ${isCurrentSpeech ? 'bg-yellow-200' : (isSaved
                           ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
-                          : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                          : 'hover:bg-indigo-100 active:bg-indigo-200')}
                         ${isTranslating ? 'opacity-70 cursor-wait' : ''}`}
                     >
                       {token}
