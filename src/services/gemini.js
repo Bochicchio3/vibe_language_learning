@@ -105,3 +105,51 @@ export async function generateWordDeepDive(word, context) {
         throw error;
     }
 }
+
+export async function analyzeWriting(text) {
+    const prompt = `
+    You are a German language teacher correcting a student's writing.
+    Analyze the following German text:
+    "${text}"
+
+    Return ONLY a valid JSON object with the following structure:
+    {
+      "correctedText": "The full text with all grammar and spelling errors fixed.",
+      "feedback": "A brief overall comment on the writing style and level.",
+      "rating": "A CEFR level estimate (e.g., A1, A2, B1...)",
+      "corrections": [
+        {
+          "original": "mistaken phrase",
+          "correction": "corrected phrase",
+          "explanation": "Why it was wrong"
+        }
+      ],
+      "suggestions": [
+        "Suggestion for better vocabulary or phrasing 1",
+        "Suggestion 2"
+      ]
+    }
+    Do not include markdown formatting. Just the raw JSON string.
+  `;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        if (!response.ok) throw new Error(response.statusText);
+
+        const data = await response.json();
+        const textResponse = data.candidates[0].content.parts[0].text;
+        const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        return JSON.parse(cleanJson);
+    } catch (error) {
+        console.error("Writing analysis failed:", error);
+        throw error;
+    }
+}

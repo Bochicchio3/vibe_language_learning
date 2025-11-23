@@ -25,7 +25,8 @@ import {
   Mic,
   TrendingUp,
   Upload,
-  FileText
+  FileText,
+  PenTool
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import ePub from 'epubjs';
@@ -57,6 +58,7 @@ import LibraryView from './components/LibraryView';
 import VocabDashboard from './components/VocabDashboard';
 import SpeakingPractice from './components/SpeakingPractice';
 import ProgressView from './components/ProgressView';
+import WritingPractice from './components/WritingPractice';
 import { isDue } from './services/srs';
 import { recordActivitySession, CATEGORIES } from './services/activityTracker';
 import { useTTS } from './hooks/useTTS';
@@ -1083,6 +1085,13 @@ function AuthenticatedApp() {
         </button>
 
         <button
+          onClick={() => setView('writing')}
+          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'writing' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <PenTool className="mx-auto" size={24} /> Writing
+        </button>
+
+        <button
           onClick={() => setView('vocab')}
           className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'vocab' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
@@ -1151,6 +1160,7 @@ function AuthenticatedApp() {
           )}
           {view === 'reader' && <ReaderView />}
           {view === 'speaking' && <SpeakingPractice />}
+          {view === 'writing' && <WritingPractice savedVocab={savedVocab} onSave={() => setView('library')} />}
           {view === 'vocab' && (
             <VocabDashboard
               vocab={savedVocab}

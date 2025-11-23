@@ -347,3 +347,60 @@ Example: ["Ich möchte bezahlen, bitte.", "Haben Sie das in Rot?", "Danke, auf W
         return ["Hallo!", "Ja, bitte.", "Danke."]; // Fallback
     }
 };
+
+export const analyzeWriting = async (text, model) => {
+    const systemPrompt = `
+You are a German language teacher correcting a student's writing.
+Analyze the provided German text.
+Return ONLY a valid JSON object with the following structure:
+{
+  "correctedText": "The full text with all grammar and spelling errors fixed.",
+  "feedback": "A brief overall comment on the writing style and level.",
+  "rating": "A CEFR level estimate (e.g., A1, A2, B1...)",
+  "corrections": [
+    {
+      "original": "mistaken phrase",
+      "correction": "corrected phrase",
+      "explanation": "Why it was wrong"
+    }
+  ],
+  "suggestions": [
+    "Suggestion for better vocabulary or phrasing 1",
+    "Suggestion 2"
+  ]
+}
+Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
+`;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: text }
+                ],
+                stream: false,
+                format: "json"
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to analyze writing');
+        }
+
+        const data = await response.json();
+        let jsonStr = data.message?.content;
+
+        // Cleanup
+        jsonStr = jsonStr.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+
+        return JSON.parse(jsonStr);
+
+    } catch (error) {
+        console.error('Error analyzing writing:', error);
+        throw error;
+    }
+};
