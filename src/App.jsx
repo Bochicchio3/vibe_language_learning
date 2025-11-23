@@ -22,7 +22,8 @@ import {
   Sparkles,
   Book, // Import Book icon
   MessageCircle,
-  Mic
+  Mic,
+  TrendingUp
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginView from './components/LoginView';
@@ -47,7 +48,9 @@ import FlashcardView from './components/FlashcardView';
 import LibraryView from './components/LibraryView';
 import VocabDashboard from './components/VocabDashboard';
 import SpeakingPractice from './components/SpeakingPractice';
+import ProgressView from './components/ProgressView';
 import { isDue } from './services/srs';
+import { recordReadingSession } from './services/readingTracker';
 import { useTTS } from './hooks/useTTS';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---
@@ -110,6 +113,7 @@ function AuthenticatedApp() {
   const { speak, cancel, isSpeaking, currentSpeechIndex } = useTTS();
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [chatInitialMessage, setChatInitialMessage] = useState('');
+  const [readingSessionStart, setReadingSessionStart] = useState(null);
   const { logout, currentUser } = useAuth();
 
   // --- FIRESTORE SYNC ---
@@ -158,10 +162,33 @@ function AuthenticatedApp() {
   }, [currentUser]);
 
   // Cancel speech when navigating away from reader/chapter
-  // Cancel speech when navigating away from reader/chapter
   useEffect(() => {
     cancel();
   }, [view, cancel]);
+
+  // Reading session timer: start when entering reader, save when leaving
+  useEffect(() => {
+    if (view === 'reader' || view === 'chapter_reader') {
+      setReadingSessionStart(Date.now());
+    } else if (readingSessionStart) {
+      // Save session when leaving reader
+      const duration = Math.floor((Date.now() - readingSessionStart) / 1000);
+      if (duration >= 10 && currentUser) {
+        let textTitle = 'Unknown Text';
+        if (view !== 'reader' && activeText) {
+          textTitle = activeText.title;
+        } else if (activeChapter && activeBook) {
+          textTitle = `${activeBook.title} - ${activeChapter.title}`;
+        }
+
+        const textId = activeTextId || activeChapter?.id || 'unknown';
+        recordReadingSession(currentUser.uid, textId, textTitle, duration).catch(err => {
+          console.error('Error recording reading session:', err);
+        });
+      }
+      setReadingSessionStart(null);
+    }
+  }, [view, currentUser]);
 
   // --- HELPERS ---
   const dueCount = Object.values(savedVocab).filter(word => isDue(word.srs)).length;
@@ -866,6 +893,13 @@ function AuthenticatedApp() {
           )}
         </button>
 
+        <button
+          onClick={() => setView('progress')}
+          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'progress' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <TrendingUp className="mx-auto" size={24} /> Progress
+        </button>
+
         <div className="hidden md:block mt-auto mb-8 text-center space-y-4">
           <div className="flex justify-center" title={isSyncing ? "Syncing to cloud..." : "Saved to cloud"}>
             {isSyncing ? (
@@ -910,6 +944,7 @@ function AuthenticatedApp() {
           {view === 'add' && <AddTextView />}
           {view === 'generator' && <GeneratorView />}
           {view === 'chat' && <ChatView />}
+          {view === 'progress' && <ProgressView />}
           {view === 'flashcards' && <FlashcardView />}
           {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} />}
           {view === 'book_detail' && (
