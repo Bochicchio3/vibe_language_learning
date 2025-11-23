@@ -1,74 +1,231 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useTTS = () => {
-    const [isSpeaking, setIsSpeaking] = useState(false);
-    const [currentSpeechIndex, setCurrentSpeechIndex] = useState(-1);
-    const utteranceRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isModelLoading, setIsModelLoading] = useState(true);
+    const [currentSentenceIndex, setCurrentSentenceIndex] = useState(-1);
+    const [currentSentenceText, setCurrentSentenceText] = useState('');
+    const [generatingSentences, setGeneratingSentences] = useState(new Set()); // Track which sentences are being generated
+
+    const workerRef = useRef(null);
+    const audioContextRef = useRef(null);
+    const sentenceQueueRef = useRef([]);
+    const isProcessingQueueRef = useRef(false);
+    const scheduledAudioEndTimeRef = useRef(0);
+    const isPlayingRef = useRef(false);
+    const activeSourcesRef = useRef([]); // Track all active audio sources
+    const currentSessionIdRef = useRef(0); // Track current generation session
+
+    const timeoutsRef = useRef([]);
 
     useEffect(() => {
+        // Initialize Sherpa Worker
+        workerRef.current = new Worker(new URL('../workers/sherpa.worker.js', import.meta.url), {
+            type: 'classic'
+        });
+
+        workerRef.current.onmessage = (event) => {
+            const { type, audio, sampling_rate, error, text, index, sessionId } = event.data;
+
+            if (type === 'init-start') {
+                setIsModelLoading(true);
+            } else if (type === 'init-complete') {
+                setIsModelLoading(false);
+                console.log('TTS Model loaded');
+            } else if (type === 'audio') {
+                // Only play if we are still supposed to be playing AND this is from the current session
+                if (isPlayingRef.current && sessionId === currentSessionIdRef.current) {
+                    // Remove from generating set
+                    setGeneratingSentences(prev => {
+                        const next = new Set(prev);
+                        next.delete(index);
+                        return next;
+                    });
+                    playAudioChunk(audio, sampling_rate, text, index);
+                } else {
+                    console.log(`Ignoring audio from old session (${sessionId} vs ${currentSessionIdRef.current})`);
+                }
+            } else if (type === 'error') {
+                console.error('TTS Worker Error:', error);
+                setIsLoading(false);
+                setIsPlaying(false);
+                isPlayingRef.current = false;
+                setGeneratingSentences(new Set());
+            }
+        };
+
         return () => {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
+            if (workerRef.current) {
+                workerRef.current.terminate();
             }
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+            }
+            // Clear timeouts
+            timeoutsRef.current.forEach(clearTimeout);
+            // Stop all active sources
+            activeSourcesRef.current.forEach(source => {
+                try {
+                    source.stop();
+                } catch (e) {
+                    // Ignore if already stopped
+                }
+            });
         };
     }, []);
 
-    const cancel = useCallback(() => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-            setCurrentSpeechIndex(-1);
-        }
-    }, []);
-
-    const speak = useCallback((text, lang = 'de-DE', rate = 0.9) => {
-        if (!('speechSynthesis' in window)) {
-            console.warn("Browser does not support Text-to-Speech");
-            return;
+    const playAudioChunk = (audioData, sampleRate, text, index) => {
+        if (!audioContextRef.current) {
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        // Cancel any current speech
-        window.speechSynthesis.cancel();
+        const ctx = audioContextRef.current;
+        const buffer = ctx.createBuffer(1, audioData.length, sampleRate);
+        buffer.getChannelData(0).set(audioData);
 
-        // If we were already speaking, we just stopped it (toggle behavior if called with same text, 
-        // but here we just stop. The toggle logic should be in the component if desired).
-        // Actually, let's just start the new speech. The component can handle the toggle logic.
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
 
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang;
-        utterance.rate = rate;
-        utteranceRef.current = utterance;
+        // Track this source
+        activeSourcesRef.current.push(source);
 
-        utterance.onstart = () => {
-            setIsSpeaking(true);
-            setCurrentSpeechIndex(0);
-        };
+        // Schedule playback
+        const currentTime = ctx.currentTime;
+        // If scheduled time is in the past, reset it to now
+        if (scheduledAudioEndTimeRef.current < currentTime) {
+            scheduledAudioEndTimeRef.current = currentTime;
+        }
 
-        utterance.onboundary = (event) => {
-            if (event.name === 'word') {
-                setCurrentSpeechIndex(event.charIndex);
+        const startTime = scheduledAudioEndTimeRef.current;
+        source.start(startTime);
+
+        // Schedule UI update
+        const delay = (startTime - currentTime) * 1000;
+        const timeoutId = setTimeout(() => {
+            if (index !== undefined) setCurrentSentenceIndex(index);
+            if (text !== undefined) setCurrentSentenceText(text);
+        }, Math.max(0, delay));
+
+        timeoutsRef.current.push(timeoutId);
+
+        // Update scheduled time for next chunk + small pause
+        scheduledAudioEndTimeRef.current += buffer.duration + 0.2; // 0.2s pause between sentences
+
+        // Handle sentence completion (approximate)
+        source.onended = () => {
+            // Remove from active sources
+            activeSourcesRef.current = activeSourcesRef.current.filter(s => s !== source);
+
+            // If queue is empty and audio finished, we are done
+            if (sentenceQueueRef.current.length === 0 && ctx.currentTime >= scheduledAudioEndTimeRef.current - 0.3) {
+                setIsPlaying(false);
+                isPlayingRef.current = false;
+                setCurrentSentenceIndex(-1);
+                setCurrentSentenceText('');
             }
         };
 
-        utterance.onend = () => {
-            setIsSpeaking(false);
-            setCurrentSpeechIndex(-1);
-        };
+        // Process next sentence in queue
+        processNextSentence();
+    };
 
-        utterance.onerror = (event) => {
-            console.error("Speech synthesis error", event);
-            setIsSpeaking(false);
-            setCurrentSpeechIndex(-1);
-        };
+    const processNextSentence = () => {
+        if (sentenceQueueRef.current.length > 0 && isPlayingRef.current) {
+            const nextItem = sentenceQueueRef.current.shift();
 
-        window.speechSynthesis.speak(utterance);
+            // Mark as generating
+            setGeneratingSentences(prev => new Set(prev).add(nextItem.index));
+
+            // Don't update state here anymore
+            workerRef.current.postMessage({
+                type: 'speak',
+                text: nextItem.text,
+                index: nextItem.index,
+                sessionId: currentSessionIdRef.current
+            });
+        }
+    };
+
+    const stop = useCallback(() => {
+        // Increment session ID to invalidate any pending audio
+        currentSessionIdRef.current += 1;
+
+        // Stop all currently playing/scheduled audio sources immediately
+        activeSourcesRef.current.forEach(source => {
+            try {
+                source.stop();
+            } catch (e) {
+                // Ignore if already stopped
+            }
+        });
+        activeSourcesRef.current = [];
+
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+        timeoutsRef.current.forEach(clearTimeout);
+        timeoutsRef.current = [];
+        sentenceQueueRef.current = [];
+        setIsPlaying(false);
+        isPlayingRef.current = false;
+        setIsLoading(false);
+        setIsPaused(false);
+        setCurrentSentenceIndex(-1);
+        setCurrentSentenceText('');
+        setGeneratingSentences(new Set());
+        scheduledAudioEndTimeRef.current = 0;
+    }, []);
+
+    const speak = useCallback((text, startIndex = 0) => {
+        if (!text || isModelLoading) return;
+
+        // Reset state
+        stop();
+        setIsPlaying(true);
+        isPlayingRef.current = true;
+        setIsLoading(true);
+
+        // Split text into sentences
+        const segmenter = new Intl.Segmenter('de', { granularity: 'sentence' });
+        const sentences = Array.from(segmenter.segment(text)).map((s, i) => ({
+            text: s.segment,
+            index: i
+        }));
+
+        // Start from the requested index
+        sentenceQueueRef.current = sentences.slice(startIndex);
+        processNextSentence();
+    }, [isModelLoading, stop]);
+
+    const pause = useCallback(() => {
+        if (audioContextRef.current) {
+            audioContextRef.current.suspend();
+            setIsPaused(true);
+        }
+    }, []);
+
+    const resume = useCallback(() => {
+        if (audioContextRef.current) {
+            audioContextRef.current.resume();
+            setIsPaused(false);
+        }
     }, []);
 
     return {
         speak,
-        cancel,
-        isSpeaking,
-        currentSpeechIndex,
-        supported: 'speechSynthesis' in window
+        stop,
+        pause,
+        resume,
+        isPlaying,
+        isPaused,
+        isLoading,
+        isModelLoading,
+        currentSentenceIndex,
+        currentSentenceText,
+        generatingSentences
     };
 };

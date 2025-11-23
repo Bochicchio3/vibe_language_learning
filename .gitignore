@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# TTS Models (downloaded by scripts/download_models.js)
+public/wasm/
