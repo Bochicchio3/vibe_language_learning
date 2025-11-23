@@ -21,7 +21,8 @@ import {
   Loader2,
   Sparkles,
   Book, // Import Book icon
-  MessageCircle
+  MessageCircle,
+  Mic
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginView from './components/LoginView';
@@ -39,10 +40,13 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { translateWord } from './services/translation';
-import { generateStory } from './services/gemini';
+import { generateStory as generateGeminiStory } from './services/gemini';
+import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels } from './services/ollama';
 
 import FlashcardView from './components/FlashcardView';
 import LibraryView from './components/LibraryView';
+import VocabDashboard from './components/VocabDashboard';
+import SpeakingPractice from './components/SpeakingPractice';
 import { isDue } from './services/srs';
 import { useTTS } from './hooks/useTTS';
 
@@ -288,6 +292,22 @@ function AuthenticatedApp() {
     }
   };
 
+  const handleDeleteWord = async (word) => {
+    if (!currentUser) return;
+    try {
+      await deleteDoc(doc(db, 'users', currentUser.uid, 'vocab', word));
+      // Optimistic update
+      setSavedVocab(prev => {
+        const newVocab = { ...prev };
+        delete newVocab[word];
+        return newVocab;
+      });
+    } catch (error) {
+      console.error("Error deleting word:", error);
+      alert("Failed to delete word.");
+    }
+  };
+
   const handleToggleRead = async (textId, isRead) => {
     if (!currentUser) return;
     try {
@@ -303,17 +323,38 @@ function AuthenticatedApp() {
 
   const GeneratorView = () => {
     const [topic, setTopic] = useState('');
+    const [theme, setTheme] = useState('');
     const [level, setLevel] = useState('A2');
     const [length, setLength] = useState('Medium');
+    const [provider, setProvider] = useState('gemini');
+    const [ollamaModels, setOllamaModels] = useState([]);
+    const [selectedOllamaModel, setSelectedOllamaModel] = useState('');
     const [generating, setGenerating] = useState(false);
     const [generatedStory, setGeneratedStory] = useState(null);
+
+    useEffect(() => {
+      if (provider === 'ollama') {
+        fetchOllamaModels().then(models => {
+          setOllamaModels(models);
+          if (models.length > 0 && !selectedOllamaModel) {
+            setSelectedOllamaModel(models[0].name);
+          }
+        });
+      }
+    }, [provider]);
 
     const handleGenerate = async (e) => {
       e.preventDefault();
       setGenerating(true);
       setGeneratedStory(null);
       try {
-        const story = await generateStory(topic, level, length);
+        let story;
+        if (provider === 'gemini') {
+          story = await generateGeminiStory(topic, level, length, theme);
+        } else {
+          if (!selectedOllamaModel) throw new Error("No Ollama model selected");
+          story = await generateOllamaStory(topic, level, length, theme, selectedOllamaModel);
+        }
         setGeneratedStory(story);
       } catch (error) {
         console.error("Generation error:", error);
@@ -367,6 +408,48 @@ function AuthenticatedApp() {
                 placeholder="e.g., A day at the beach, Space travel, Cooking dinner..."
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Theme (Optional)</label>
+                <input
+                  value={theme}
+                  onChange={(e) => setTheme(e.target.value)}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g., Mystery, Sci-Fi..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Model Provider</label>
+                <select
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value)}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  <option value="gemini">Gemini (Cloud)</option>
+                  <option value="ollama">Ollama (Local)</option>
+                </select>
+              </div>
+            </div>
+
+            {provider === 'ollama' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Ollama Model</label>
+                <select
+                  value={selectedOllamaModel}
+                  onChange={(e) => setSelectedOllamaModel(e.target.value)}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                >
+                  {ollamaModels.length === 0 && <option value="">Loading models...</option>}
+                  {ollamaModels.map(m => (
+                    <option key={m.name} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
+                {ollamaModels.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Make sure Ollama is running!</p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -688,107 +771,7 @@ function AuthenticatedApp() {
     );
   };
 
-  const VocabView = () => {
-    const words = Object.keys(savedVocab);
 
-    if (words.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
-          <Languages size={48} className="mb-4 opacity-50" />
-          <p className="text-lg">No words saved yet.</p>
-          <p className="text-sm">Go read a text and click on words you don't know!</p>
-        </div>
-      );
-    }
-
-    const currentWord = words[flashcardIndex];
-    const cardData = savedVocab[currentWord];
-
-    const nextCard = () => {
-      setShowFlashcardAnswer(false);
-      setFlashcardIndex((prev) => (prev + 1) % words.length);
-    };
-
-    const prevCard = () => {
-      setShowFlashcardAnswer(false);
-      setFlashcardIndex((prev) => (prev - 1 + words.length) % words.length);
-    };
-
-    return (
-      <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-800">Flashcards ({words.length})</h2>
-          <div className="text-sm text-slate-500">
-            Card {flashcardIndex + 1} of {words.length}
-          </div>
-        </div>
-
-        {/* Flashcard */}
-        <div className="perspective-1000 min-h-[300px] mb-6">
-          <div
-            className={`relative w-full h-80 transition-all duration-500 transform-style-3d cursor-pointer ${showFlashcardAnswer ? 'rotate-y-180' : ''}`}
-            onClick={() => setShowFlashcardAnswer(!showFlashcardAnswer)}
-          >
-            {/* Front */}
-            <div className={`absolute w-full h-full bg-white border-2 border-indigo-100 rounded-2xl shadow-lg flex flex-col items-center justify-center p-8 backface-hidden ${showFlashcardAnswer ? 'opacity-0' : 'opacity-100'}`}>
-              <span className="text-xs font-bold tracking-wider text-indigo-500 uppercase mb-4">German</span>
-              <h3 className="text-4xl font-bold text-slate-800 text-center">{currentWord}</h3>
-              <p className="mt-8 text-sm text-slate-400">Tap to flip</p>
-            </div>
-
-            {/* Back */}
-            <div className={`absolute w-full h-full bg-indigo-50 border-2 border-indigo-200 rounded-2xl shadow-lg flex flex-col items-center justify-center p-8 rotate-y-180 backface-hidden ${showFlashcardAnswer ? 'opacity-100' : 'opacity-0'}`}>
-              <span className="text-xs font-bold tracking-wider text-indigo-500 uppercase mb-4">Meaning</span>
-
-              {/* Editable Definition */}
-              <input
-                type="text"
-                value={cardData.definition}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => updateDefinition(currentWord, e.target.value)}
-                placeholder="Type definition here..."
-                className="text-center bg-white border border-indigo-200 rounded p-2 text-xl text-slate-800 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400"
-              />
-
-              <div className="text-sm text-slate-500 mt-2">
-                Found in: <span className="italic">{cardData.context}</span>
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const newVocab = { ...savedVocab };
-                  delete newVocab[currentWord];
-                  setSavedVocab(newVocab);
-                  if (words.length === 1) setFlashcardIndex(0);
-                  else if (flashcardIndex >= words.length - 1) setFlashcardIndex(prev => prev - 1);
-                }}
-                className="mt-6 flex items-center gap-1 text-red-500 hover:text-red-700 text-sm font-medium"
-              >
-                <Trash2 size={14} /> Remove Word
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex justify-center gap-4">
-          <button onClick={prevCard} className="p-3 rounded-full bg-white border hover:bg-slate-50 shadow-sm">
-            <ChevronLeft />
-          </button>
-          <button
-            onClick={() => setShowFlashcardAnswer(!showFlashcardAnswer)}
-            className="px-8 py-3 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 shadow-md transition"
-          >
-            {showFlashcardAnswer ? 'Hide Answer' : 'Show Answer'}
-          </button>
-          <button onClick={nextCard} className="p-3 rounded-full bg-white border hover:bg-slate-50 shadow-sm">
-            <ChevronRight />
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   const AddTextView = () => (
     <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm">
@@ -857,6 +840,13 @@ function AuthenticatedApp() {
         </button>
 
         <button
+          onClick={() => setView('speaking')}
+          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'speaking' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+        >
+          <Mic className="mx-auto" size={24} /> Speaking
+        </button>
+
+        <button
           onClick={() => setView('vocab')}
           className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'vocab' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
         >
@@ -909,7 +899,14 @@ function AuthenticatedApp() {
             />
           )}
           {view === 'reader' && <ReaderView />}
-          {view === 'vocab' && <VocabView />}
+          {view === 'speaking' && <SpeakingPractice />}
+          {view === 'vocab' && (
+            <VocabDashboard
+              vocab={savedVocab}
+              onUpdate={updateDefinition}
+              onDelete={handleDeleteWord}
+            />
+          )}
           {view === 'add' && <AddTextView />}
           {view === 'generator' && <GeneratorView />}
           {view === 'chat' && <ChatView />}

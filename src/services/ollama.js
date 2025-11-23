@@ -90,3 +90,64 @@ Example output format:
         throw error;
     }
 };
+
+export const generateStory = async (topic, level, length, theme = "", model) => {
+    const lengthMap = {
+        "Short": "approx 100 words",
+        "Medium": "approx 250 words",
+        "Long": "approx 500 words"
+    };
+
+    const systemPrompt = `
+You are a German language teacher.
+Write a German story about "${topic}"${theme ? ` with a theme of "${theme}"` : ""} for a learner at ${level} level.
+Length: ${lengthMap[length] || "approx 200 words"}.
+
+IMPORTANT: Return ONLY valid JSON with the following structure:
+{
+  "title": "The German Title",
+  "content": "The German story text..."
+}
+Do not include markdown formatting (like \`\`\`json) in the response. Just the raw JSON string.
+`;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: "Generate the story now." }
+                ],
+                stream: false,
+                format: "json"
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ollama API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        let jsonStr = data.message?.content;
+
+        if (!jsonStr) {
+            throw new Error("No content in response");
+        }
+
+        console.log("Raw Ollama Response:", jsonStr);
+
+        // Cleanup if model adds markdown despite instructions
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        return JSON.parse(jsonStr);
+
+    } catch (error) {
+        console.error('Error generating story with Ollama:', error);
+        throw error;
+    }
+};
+

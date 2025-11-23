@@ -8,7 +8,7 @@ const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-
  * @param {string} length - The desired length (Short, Medium, Long).
  * @returns {Promise<{title: string, content: string}>} - The generated story.
  */
-export async function generateStory(topic, level, length) {
+export async function generateStory(topic, level, length, theme = "") {
     const lengthMap = {
         "Short": "approx 100 words",
         "Medium": "approx 250 words",
@@ -16,7 +16,7 @@ export async function generateStory(topic, level, length) {
     };
 
     const prompt = `
-    Write a German story about "${topic}" for a learner at ${level} level.
+    Write a German story about "${topic}"${theme ? ` with a theme of "${theme}"` : ""} for a learner at ${level} level.
     Length: ${lengthMap[length] || "approx 200 words"}.
     
     IMPORTANT: Return ONLY valid JSON with the following structure:
@@ -60,6 +60,48 @@ export async function generateStory(topic, level, length) {
         return JSON.parse(cleanJson);
     } catch (error) {
         console.error("Story Generation failed:", error);
+        throw error;
+    }
+}
+
+export async function generateWordDeepDive(word, context) {
+    const prompt = `
+    Analyze the German word "${word}"${context ? ` in the context of: "${context}"` : ""}.
+    Provide a deep dive analysis for a language learner.
+    
+    IMPORTANT: Return ONLY valid JSON with the following structure:
+    {
+      "etymology": "Brief origin/history...",
+      "mnemonics": ["Mnemonic 1", "Mnemonic 2"],
+      "examples": [
+        {"german": "Example sentence 1", "english": "English translation 1"},
+        {"german": "Example sentence 2", "english": "English translation 2"},
+        {"german": "Example sentence 3", "english": "English translation 3"}
+      ],
+      "synonyms": ["Synonym 1", "Synonym 2"],
+      "usage_notes": "Nuances, when to use vs synonyms, etc."
+    }
+    Do not include markdown formatting. Just the raw JSON string.
+  `;
+
+    try {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        if (!response.ok) throw new Error(response.statusText);
+
+        const data = await response.json();
+        const textResponse = data.candidates[0].content.parts[0].text;
+        const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        return JSON.parse(cleanJson);
+    } catch (error) {
+        console.error("Deep Dive generation failed:", error);
         throw error;
     }
 }

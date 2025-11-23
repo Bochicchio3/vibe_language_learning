@@ -59,7 +59,16 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         window.getSelection().removeAllRanges();
     };
 
-    const toggleWord = async (originalToken, sentence) => {
+    const findContextSentence = (content, word) => {
+        if (!content) return "Context not found";
+        // Split into sentences (naive split by .!?)
+        const sentences = content.match(/[^.!?]+[.!?]+/g) || [content];
+        // Find the first sentence containing the word
+        const sentence = sentences.find(s => s.includes(word));
+        return sentence ? sentence.trim() : "Context not found";
+    };
+
+    const toggleWord = async (originalToken) => {
         const cleanWord = originalToken.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
         if (!cleanWord || cleanWord.length < 2) return;
 
@@ -68,13 +77,17 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
 
         try {
             setTranslatingWord(cleanWord);
-            const translation = await translateWord(cleanWord, sentence);
+
+            // Find Context
+            const contextSentence = findContextSentence(chapter.content, originalToken);
+
+            const translation = await translateWord(cleanWord, contextSentence);
 
             // Save to Firestore
             const vocabRef = doc(db, 'users', currentUser.uid, 'vocab', cleanWord);
             await setDoc(vocabRef, {
                 definition: translation,
-                context: sentence,
+                context: contextSentence,
                 createdAt: serverTimestamp()
             }, { merge: true });
 
@@ -194,7 +207,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                         return (
                             <span
                                 key={index}
-                                onClick={() => toggleWord(cleanToken, chapter.content)}
+                                onClick={() => toggleWord(cleanToken)}
                                 className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
                             ${isCurrentSpeech ? 'bg-yellow-200' : (isSaved
                                         ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
