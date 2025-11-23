@@ -263,3 +263,87 @@ Do not include any markdown formatting like \`\`\`json. Just the raw JSON array.
         throw error;
     }
 };
+
+export const generateRolePlayResponse = async (messages, scenario, model) => {
+    const systemPrompt = `
+You are a helpful German tutor role-playing as a character in a "${scenario}" scenario.
+Your goal is to help the user practice German conversation.
+Keep your responses natural, relatively short (1-3 sentences), and suitable for a learner.
+If the user makes a mistake, you can subtly correct them in your response or just continue the conversation naturally if it's understandable.
+Do NOT break character.
+`;
+
+    const conversation = [
+        { role: "system", content: systemPrompt },
+        ...messages
+    ];
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: conversation,
+                stream: false
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get response from Ollama');
+        }
+
+        const data = await response.json();
+        return data.message?.content || "...";
+
+    } catch (error) {
+        console.error('Error in roleplay:', error);
+        throw error;
+    }
+};
+
+export const generateHint = async (messages, scenario, model) => {
+    const systemPrompt = `
+You are a German language helper. The user is in a role-play scenario: "${scenario}".
+The user is stuck and needs a hint on what to say next.
+Read the conversation history and suggest 3 possible German responses the user could say.
+Return ONLY a valid JSON array of strings.
+Example: ["Ich möchte bezahlen, bitte.", "Haben Sie das in Rot?", "Danke, auf Wiedersehen."]
+`;
+
+    const conversation = [
+        { role: "system", content: systemPrompt },
+        ...messages,
+        { role: "user", content: "I don't know what to say. Give me a hint." }
+    ];
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: conversation,
+                stream: false,
+                format: "json"
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to get hint');
+        }
+
+        const data = await response.json();
+        let jsonStr = data.message?.content;
+
+        // Cleanup
+        jsonStr = jsonStr.replace(/\`\`\`json/g, '').replace(/\`\`\`/g, '').trim();
+
+        const hints = JSON.parse(jsonStr);
+        return Array.isArray(hints) ? hints : ["Entschuldigung?", "Ich verstehe nicht.", "Können Sie das wiederholen?"];
+
+    } catch (error) {
+        console.error('Error generating hint:', error);
+        return ["Hallo!", "Ja, bitte.", "Danke."]; // Fallback
+    }
+};
