@@ -1,6 +1,7 @@
 import React from 'react';
 import { BarChart2, BookOpen, Clock, Target, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { CATEGORY_META } from '../../services/activityTracker';
 
 export default function ReadingStats({ stats, sessions }) {
     const formatTime = (minutes) => {
@@ -13,7 +14,7 @@ export default function ReadingStats({ stats, sessions }) {
     const statCards = [
         {
             icon: Clock,
-            label: 'Total Reading Time',
+            label: 'Total Time',
             value: formatTime(stats.totalMinutes),
             color: 'from-blue-500 to-cyan-500',
             bgColor: 'bg-blue-50',
@@ -21,7 +22,7 @@ export default function ReadingStats({ stats, sessions }) {
         },
         {
             icon: BookOpen,
-            label: 'Sessions Completed',
+            label: 'Total Sessions',
             value: stats.totalSessions,
             color: 'from-indigo-500 to-purple-500',
             bgColor: 'bg-indigo-50',
@@ -29,19 +30,11 @@ export default function ReadingStats({ stats, sessions }) {
         },
         {
             icon: Target,
-            label: 'Avg Session Length',
+            label: 'Avg Session',
             value: `${stats.averageSessionMinutes}m`,
             color: 'from-emerald-500 to-teal-500',
             bgColor: 'bg-emerald-50',
             textColor: 'text-emerald-600'
-        },
-        {
-            icon: TrendingUp,
-            label: 'Longest Session',
-            value: `${stats.longestSessionMinutes}m`,
-            color: 'from-amber-500 to-orange-500',
-            bgColor: 'bg-amber-50',
-            textColor: 'text-amber-600'
         }
     ];
 
@@ -49,10 +42,11 @@ export default function ReadingStats({ stats, sessions }) {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-6">
                 <BarChart2 className="text-indigo-600" />
-                Reading Statistics
+                Activity Statistics
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Overall Stats */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
                 {statCards.map((stat, index) => (
                     <motion.div
                         key={index}
@@ -74,14 +68,37 @@ export default function ReadingStats({ stats, sessions }) {
                 ))}
             </div>
 
-            {stats.totalTexts > 0 && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
-                        <span className="text-sm text-slate-600">Texts Read</span>
-                        <span className="text-lg font-bold text-indigo-600">{stats.totalTexts}</span>
-                    </div>
+            {/* Category Breakdown */}
+            <div className="border-t border-slate-100 pt-6">
+                <h4 className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-4">By Category</h4>
+                <div className="space-y-3">
+                    {Object.entries(stats.byCategory || {}).map(([category, catStats]) => {
+                        if (catStats.sessions === 0) return null;
+
+                        const meta = CATEGORY_META[category];
+                        if (!meta) return null;
+
+                        return (
+                            <div key={category} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">{meta.icon}</span>
+                                    <div>
+                                        <div className="font-medium text-slate-800">{meta.label}</div>
+                                        <div className="text-xs text-slate-500">
+                                            {catStats.sessions} session{catStats.sessions !== 1 ? 's' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-lg font-bold text-slate-800">
+                                        {formatTime(catStats.minutes)}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
-            )}
+            </div>
         </div>
     );
 }

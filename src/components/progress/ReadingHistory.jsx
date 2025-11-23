@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { BookOpen, Clock, Calendar, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CATEGORY_META } from '../../services/activityTracker';
 
 export default function ReadingHistory({ sessions }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMonth, setSelectedMonth] = useState('all');
+    const [selectedCategory, setSelectedCategory] = useState('all');
 
     // Filter sessions
     const filteredSessions = sessions.filter(session => {
-        const matchesSearch = session.textTitle.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = session.referenceTitle?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+        const matchesCategory = selectedCategory === 'all' || session.category === selectedCategory;
 
-        if (selectedMonth === 'all') return matchesSearch;
+        if (selectedMonth === 'all') return matchesSearch && matchesCategory;
 
         const sessionMonth = new Date(session.date).toISOString().slice(0, 7); // YYYY-MM
-        return matchesSearch && sessionMonth === selectedMonth;
+        return matchesSearch && matchesCategory && sessionMonth === selectedMonth;
     });
 
     // Group sessions by date
@@ -59,7 +62,7 @@ export default function ReadingHistory({ sessions }) {
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-6">
                 <Clock className="text-indigo-600" />
-                Reading History
+                Activity History
             </h3>
 
             {/* Filters */}
@@ -69,7 +72,7 @@ export default function ReadingHistory({ sessions }) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
                         type="text"
-                        placeholder="Search by text title..."
+                        placeholder="Search by title..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border-none rounded-lg text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white transition outline-none"
@@ -83,6 +86,18 @@ export default function ReadingHistory({ sessions }) {
                         </button>
                     )}
                 </div>
+
+                {/* Category Filter */}
+                <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-2.5 bg-slate-50 border-none rounded-lg text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:bg-white transition outline-none cursor-pointer"
+                >
+                    <option value="all">All Categories</option>
+                    {Object.entries(CATEGORY_META).map(([key, meta]) => (
+                        <option key={key} value={key}>{meta.icon} {meta.label}</option>
+                    ))}
+                </select>
 
                 {/* Month Filter */}
                 <select
@@ -104,13 +119,13 @@ export default function ReadingHistory({ sessions }) {
                 {dates.length === 0 ? (
                     <div className="text-center py-12 bg-slate-50 rounded-xl">
                         <BookOpen className="mx-auto mb-3 text-slate-300" size={48} />
-                        <p className="text-slate-500">No reading sessions found</p>
-                        {searchQuery && (
+                        <p className="text-slate-500">No sessions found</p>
+                        {(searchQuery || selectedCategory !== 'all') && (
                             <button
-                                onClick={() => setSearchQuery('')}
+                                onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
                                 className="text-indigo-600 text-sm mt-2 hover:underline"
                             >
-                                Clear search
+                                Clear filters
                             </button>
                         )}
                     </div>
@@ -137,25 +152,35 @@ export default function ReadingHistory({ sessions }) {
 
                                 {/* Sessions for this day */}
                                 <div className="space-y-2 pl-6">
-                                    {daySessions.map((session, index) => (
-                                        <div
-                                            key={session.id || index}
-                                            className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors group"
-                                        >
-                                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                                                <BookOpen size={18} className="text-indigo-400 flex-shrink-0" />
-                                                <span className="text-slate-700 font-medium truncate">
-                                                    {session.textTitle}
-                                                </span>
+                                    {daySessions.map((session, index) => {
+                                        const meta = CATEGORY_META[session.category];
+                                        return (
+                                            <div
+                                                key={session.id || index}
+                                                className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors group"
+                                            >
+                                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                    <span className="text-xl flex-shrink-0">{meta?.icon || '📝'}</span>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="text-slate-700 font-medium truncate">
+                                                            {session.referenceTitle || meta?.label || 'Activity'}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500">
+                                                            {meta?.label}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <Clock size={14} className="text-slate-400" />
+                                                    <span className="text-sm text-slate-600 font-medium">
+                                                        {session.category === 'vocab'
+                                                            ? `${session.cardsReviewed || 0} cards`
+                                                            : formatDuration(session.durationSeconds)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                <Clock size={14} className="text-slate-400" />
-                                                <span className="text-sm text-slate-600 font-medium">
-                                                    {formatDuration(session.durationSeconds)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </motion.div>
                         );

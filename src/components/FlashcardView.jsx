@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateNextReview, isDue } from '../services/srs';
 import Flashcard from './Flashcard';
+import { recordVocabSession } from '../services/activityTracker';
 
 export default function FlashcardView() {
     const { currentUser } = useAuth();
@@ -12,6 +13,7 @@ export default function FlashcardView() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loading, setLoading] = useState(true);
     const [sessionComplete, setSessionComplete] = useState(false);
+    const [cardsReviewed, setCardsReviewed] = useState(0);
 
     useEffect(() => {
         console.log("FlashcardView mounted. CurrentUser:", currentUser?.uid);
@@ -70,6 +72,15 @@ export default function FlashcardView() {
         } catch (error) {
             console.error("Error saving SRS state:", error);
             // In a robust app, we'd handle rollback or retry here
+        }
+
+        // Track card review
+        setCardsReviewed(prev => prev + 1);
+
+        // If session is complete, record to activity tracker
+        if (currentIndex >= dueCards.length - 1) {
+            recordVocabSession(currentUser.uid, cardsReviewed + 1)
+                .catch(err => console.error('Error recording vocab session:', err));
         }
     };
 

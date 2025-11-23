@@ -7,7 +7,8 @@ import {
     calculateStatistics,
     calculateStreak,
     getTodayProgress,
-    getWeekProgress
+    getWeekProgress,
+    CATEGORY_META
 } from '../services/readingTracker';
 import ReadingGoals from './progress/ReadingGoals';
 import ReadingStats from './progress/ReadingStats';
@@ -58,7 +59,8 @@ export default function ProgressView() {
     }
 
     const stats = calculateStatistics(sessions);
-    const streak = calculateStreak(sessions, goals?.streakMinimum || 5);
+    const streakConfig = goals?.streakMinimum || { totalMinutes: 15, categories: 2 };
+    const streak = calculateStreak(sessions, streakConfig);
     const todayProgress = getTodayProgress(sessions);
     const weekProgress = getWeekProgress(sessions);
 
@@ -68,9 +70,9 @@ export default function ProgressView() {
             <div className="mb-8">
                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
                     <TrendingUp className="text-indigo-600" />
-                    Your Reading Progress
+                    Your Learning Progress
                 </h2>
-                <p className="text-slate-500 mt-1">Track your learning journey and build consistent habits</p>
+                <p className="text-slate-500 mt-1">Track all your language learning activities and build consistent habits</p>
             </div>
 
             {/* Tabs */}
@@ -78,8 +80,8 @@ export default function ProgressView() {
                 <button
                     onClick={() => setActiveTab('overview')}
                     className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'overview'
-                            ? 'border-indigo-600 text-indigo-600'
-                            : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                 >
                     Overview
@@ -87,8 +89,8 @@ export default function ProgressView() {
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'history'
-                            ? 'border-indigo-600 text-indigo-600'
-                            : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                 >
                     History
@@ -96,8 +98,8 @@ export default function ProgressView() {
                 <button
                     onClick={() => setActiveTab('goals')}
                     className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'goals'
-                            ? 'border-indigo-600 text-indigo-600'
-                            : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-indigo-600 text-indigo-600'
+                        : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                 >
                     Goals
@@ -107,28 +109,69 @@ export default function ProgressView() {
             {/* Overview Tab */}
             {activeTab === 'overview' && (
                 <div className="space-y-8">
-                    {/* Hero Stats */}
+                    {/* Hero Stats - Multi-Category */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {Object.entries(CATEGORY_META).map(([category, meta], index) => {
+                            const categoryProgress = todayProgress.byCategory[category];
+                            if (!categoryProgress || (categoryProgress.minutes === 0 && categoryProgress.sessions === 0)) {
+                                return null; // Hide categories with no activity
+                            }
+
+                            const colorMap = {
+                                indigo: 'from-indigo-500 to-purple-600',
+                                blue: 'from-blue-500 to-cyan-600',
+                                purple: 'from-purple-500 to-pink-600',
+                                emerald: 'from-emerald-500 to-teal-600',
+                                amber: 'from-amber-500 to-orange-600',
+                                pink: 'from-pink-500 to-rose-600'
+                            };
+
+                            return (
+                                <motion.div
+                                    key={category}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className={`bg-gradient-to-br ${colorMap[meta.color] || 'from-slate-500 to-slate-600'} rounded-2xl p-5 text-white shadow-lg`}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-2xl">{meta.icon}</span>
+                                        <span className="text-xs font-medium opacity-80">{meta.label}</span>
+                                    </div>
+                                    <div className="text-3xl font-bold mb-1">
+                                        {category === 'vocab' ? categoryProgress.sessions : `${categoryProgress.minutes}m`}
+                                    </div>
+                                    <div className="text-xs opacity-90">
+                                        {category === 'vocab' ? 'cards today' : 'today'}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Overall Stats Row */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Today's Reading */}
+                        {/* Total Today */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg"
+                            transition={{ delay: 0.3 }}
+                            className="bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl p-6 text-white shadow-lg"
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <Clock size={24} className="opacity-80" />
-                                <span className="text-sm font-medium opacity-80">Today</span>
+                                <span className="text-sm font-medium opacity-80">Total Today</span>
                             </div>
-                            <div className="text-4xl font-bold mb-1">{todayProgress.minutes}</div>
-                            <div className="text-sm opacity-90">minutes read</div>
-                            <div className="mt-4 text-xs opacity-75">{todayProgress.sessionCount} session{todayProgress.sessionCount !== 1 ? 's' : ''}</div>
+                            <div className="text-4xl font-bold mb-1">{todayProgress.totalMinutes}</div>
+                            <div className="text-sm opacity-90">minutes across all activities</div>
+                            <div className="mt-4 text-xs opacity-75">{todayProgress.totalSessions} total sessions</div>
                         </motion.div>
 
                         {/* Current Streak */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.1 }}
+                            transition={{ delay: 0.4 }}
                             className="bg-gradient-to-br from-orange-400 to-red-500 rounded-2xl p-6 text-white shadow-lg"
                         >
                             <div className="flex items-center justify-between mb-2">
@@ -144,28 +187,16 @@ export default function ProgressView() {
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
+                            transition={{ delay: 0.5 }}
                             className="bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl p-6 text-white shadow-lg"
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <Calendar size={24} className="opacity-80" />
                                 <span className="text-sm font-medium opacity-80">This Week</span>
                             </div>
-                            <div className="text-4xl font-bold mb-1">{weekProgress.minutes}</div>
-                            <div className="text-sm opacity-90">minutes read</div>
-                            {goals && (
-                                <div className="mt-4">
-                                    <div className="w-full bg-white/20 rounded-full h-2">
-                                        <div
-                                            className="bg-white h-2 rounded-full transition-all duration-500"
-                                            style={{ width: `${Math.min((weekProgress.minutes / goals.weeklyMinutes) * 100, 100)}%` }}
-                                        />
-                                    </div>
-                                    <div className="text-xs opacity-75 mt-1">
-                                        Goal: {goals.weeklyMinutes} min
-                                    </div>
-                                </div>
-                            )}
+                            <div className="text-4xl font-bold mb-1">{weekProgress.totalMinutes}</div>
+                            <div className="text-sm opacity-90">minutes total</div>
+                            <div className="mt-4 text-xs opacity-75">{weekProgress.totalSessions} sessions</div>
                         </motion.div>
                     </div>
 

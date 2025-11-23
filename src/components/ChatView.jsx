@@ -3,6 +3,7 @@ import { Send, Bot, User, Loader2, RefreshCw, MessageCircle, Trash2 } from 'luci
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { recordActivitySession, CATEGORIES } from '../services/activityTracker';
 
 export default function ChatView({ isWidget = false, initialMessage = '' }) {
     const { currentUser } = useAuth();
@@ -16,6 +17,7 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
     const [isStreaming, setIsStreaming] = useState(false);
     const [streamingMessage, setStreamingMessage] = useState('');
     const messagesEndRef = useRef(null);
+    const [sessionStart] = useState(Date.now());
 
     // Initial Message Handling
     useEffect(() => {
@@ -25,6 +27,19 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
             // If not, we'll create a new one when the user sends.
         }
     }, [initialMessage]);
+
+    // Record chat session on unmount
+    useEffect(() => {
+        return () => {
+            if (sessionStart && currentUser) {
+                const duration = Math.floor((Date.now() - sessionStart) / 1000);
+                if (duration >= 10) {
+                    recordActivitySession(currentUser.uid, CATEGORIES.CHAT, duration)
+                        .catch(err => console.error('Error recording chat session:', err));
+                }
+            }
+        };
+    }, [sessionStart, currentUser]);
 
     // Fetch Models
     useEffect(() => {

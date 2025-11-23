@@ -35,7 +35,7 @@ export default function StreakTracker({ streak, sessions, goals }) {
             // Check if there were sessions on this day
             const daySessions = sessions.filter(s => s.date === dateStr);
             const totalMinutes = daySessions.reduce((sum, s) => sum + (s.durationSeconds || 0) / 60, 0);
-            const hasReading = totalMinutes >= (goals?.streakMinimum || 5);
+            const hasReading = totalMinutes >= (goals?.streakMinimum?.totalMinutes || 15);
 
             days.push({
                 date: dateStr,
@@ -101,8 +101,8 @@ export default function StreakTracker({ streak, sessions, goals }) {
                         <div
                             key={index}
                             className={`aspect-square rounded-sm transition-all cursor-pointer group relative ${day.hasReading
-                                    ? 'bg-emerald-500 hover:bg-emerald-600 shadow-sm'
-                                    : 'bg-slate-100 hover:bg-slate-200'
+                                ? 'bg-emerald-500 hover:bg-emerald-600 shadow-sm'
+                                : 'bg-slate-100 hover:bg-slate-200'
                                 }`}
                             title={`${day.date}: ${day.hasReading ? `${day.minutes} min` : 'No reading'}`}
                         >
@@ -124,7 +124,7 @@ export default function StreakTracker({ streak, sessions, goals }) {
             {/* Streak Info */}
             {goals && (
                 <div className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500">
-                    💡 Read at least {goals.streakMinimum} minutes daily to maintain your streak
+                    💡 Read at least {goals?.streakMinimum?.totalMinutes || 15} minutes daily across {goals?.streakMinimum?.categories || 2}+ categories to maintain your streak
                 </div>
             )}
         </div>

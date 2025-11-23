@@ -50,7 +50,7 @@ import VocabDashboard from './components/VocabDashboard';
 import SpeakingPractice from './components/SpeakingPractice';
 import ProgressView from './components/ProgressView';
 import { isDue } from './services/srs';
-import { recordReadingSession } from './services/readingTracker';
+import { recordActivitySession, CATEGORIES } from './services/activityTracker';
 import { useTTS } from './hooks/useTTS';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---

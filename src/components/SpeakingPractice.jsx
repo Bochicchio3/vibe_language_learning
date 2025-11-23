@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { pipeline, env } from '@xenova/transformers';
 import { Mic, MicOff, Play, Download, Loader2, CheckCircle, AlertCircle, Volume2 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { recordActivitySession, CATEGORIES } from '../services/activityTracker';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -25,6 +27,8 @@ const SpeakingPractice = () => {
     const [isModelLoaded, setIsModelLoaded] = useState(false);
     const [activeSentence, setActiveSentence] = useState(null);
     const [useFallback, setUseFallback] = useState(false);
+    const { currentUser } = useAuth();
+    const [sessionStart] = useState(Date.now());
 
     // Refs for non-render state
     const transcriberRef = useRef(null);
@@ -42,6 +46,19 @@ const SpeakingPractice = () => {
             loadModel();
         }
     }, []);
+
+    // Record speaking session on unmount
+    useEffect(() => {
+        return () => {
+            if (sessionStart && currentUser) {
+                const duration = Math.floor((Date.now() - sessionStart) / 1000);
+                if (duration >= 10) {
+                    recordActivitySession(currentUser.uid, CATEGORIES.SPEAKING, duration)
+                        .catch(err => console.error('Error recording speaking session:', err));
+                }
+            }
+        };
+    }, [sessionStart, currentUser]);
 
     // --- Model Loading ---
     const loadModel = async () => {
