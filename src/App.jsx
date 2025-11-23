@@ -26,7 +26,8 @@ import {
   TrendingUp,
   Upload,
   FileText,
-  PenTool
+  PenTool,
+  Play
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import ePub from 'epubjs';
@@ -120,7 +121,7 @@ function AuthenticatedApp() {
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [translatingWord, setTranslatingWord] = useState(null); // Track which word is being translated
   const [isSyncing, setIsSyncing] = useState(false);
-  const { speak, cancel, isSpeaking, currentSpeechIndex } = useTTS();
+  const { speak, stop, isPlaying, isLoading, isModelLoading, currentSentenceIndex, generatingSentences } = useTTS();
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [chatInitialMessage, setChatInitialMessage] = useState('');
   const [readingSessionStart, setReadingSessionStart] = useState(null);
@@ -173,8 +174,8 @@ function AuthenticatedApp() {
 
   // Cancel speech when navigating away from reader/chapter
   useEffect(() => {
-    cancel();
-  }, [view, cancel]);
+    stop();
+  }, [view, stop]);
 
   // Reading session timer: start when entering reader, save when leaving
   useEffect(() => {
@@ -807,6 +808,10 @@ function AuthenticatedApp() {
       }
     };
 
+    // Split content into sentences
+    const segmenter = new Intl.Segmenter('de', { granularity: 'sentence' });
+    const sentences = Array.from(segmenter.segment(activeText.content)).map(s => s.segment);
+
     const handleSelection = () => {
       const selectedText = window.getSelection().toString().trim();
       if (selectedText.length > 0) {
@@ -831,17 +836,9 @@ function AuthenticatedApp() {
       window.getSelection().removeAllRanges();
     };
 
-    // Calculate cumulative lengths for mapping charIndex to token
-    let charCount = 0;
-    const tokenRanges = tokens.map(token => {
-      const start = charCount;
-      charCount += token.length;
-      return { start, end: charCount };
-    });
-
     const handleSpeak = () => {
-      if (isSpeaking) {
-        cancel();
+      if (isPlaying) {
+        stop();
       } else {
         speak(showingSimplified ? simplifiedContent : activeText.content);
       }
@@ -894,7 +891,7 @@ function AuthenticatedApp() {
               </button>
             )}
 
-            {/* Model Selector (Hidden if only 1 or empty, or maybe show small?) */}
+            {/* Model Selector */}
             {ollamaModels.length > 0 && !showQuiz && (
               <select
                 value={selectedOllamaModel}
@@ -905,15 +902,22 @@ function AuthenticatedApp() {
               </select>
             )}
 
+            {isModelLoading && (
+              <span className="text-xs text-slate-500 flex items-center gap-1 mr-2">
+                <Loader2 size={12} className="animate-spin" /> Loading Model...
+              </span>
+            )}
+
             <button
               onClick={handleSpeak}
-              className={`p-2 rounded-full transition ${isSpeaking
+              className={`p-2 rounded-full transition ${isPlaying
                 ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 animate-pulse'
                 : 'hover:bg-slate-200 text-slate-700'
                 }`}
-              title={isSpeaking ? "Stop Reading" : "Read Aloud"}
+              title={isPlaying ? "Stop Reading" : "Read Aloud"}
+              disabled={isModelLoading}
             >
-              <Volume2 size={20} />
+              {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Volume2 size={20} />}
             </button>
             <button
               onClick={() => setShowQuiz(!showQuiz)}
@@ -922,118 +926,133 @@ function AuthenticatedApp() {
             >
               <Brain size={20} />
             </button>
-          </div>
-        </div>
+          </div >
+        </div >
 
         {/* Content Area */}
-        <div className="p-8 md:p-12 flex-grow overflow-y-auto">
-          {showQuiz ? (
-            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-                  <Brain className="text-indigo-600" /> Comprehension Check
-                </h3>
+        < div className="p-8 md:p-12 flex-grow overflow-y-auto" >
+          {
+            showQuiz ? (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300" >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Brain className="text-indigo-600" /> Comprehension Check
+                  </h3>
 
-                {/* Generator Controls */}
-                <div className="flex gap-2 items-center">
-                  {ollamaModels.length > 0 && (
-                    <select
-                      value={selectedOllamaModel}
-                      onChange={(e) => setSelectedOllamaModel(e.target.value)}
-                      className="text-sm p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
-                    </select>
-                  )}
-                  <button
-                    onClick={handleGenerateQuestions}
-                    disabled={isGeneratingQuestions || ollamaModels.length === 0}
-                    className="text-sm bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-200 transition disabled:opacity-50 flex items-center gap-2"
-                  >
-                    {isGeneratingQuestions ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                    Generate
-                  </button>
-                </div>
-              </div>
-
-              {activeText.questions && activeText.questions.length > 0 ? activeText.questions.map((q, idx) => (
-                <div key={idx} className="bg-slate-50 p-6 rounded-lg border border-slate-200">
-                  <p className="font-semibold text-slate-800 mb-3">{q.q}</p>
-                  <details className="text-slate-600">
-                    <summary className="cursor-pointer text-indigo-600 hover:text-indigo-800 text-sm font-medium">Show Answer</summary>
-                    <div className="mt-2 pl-4 border-l-2 border-indigo-200 italic">
-                      {q.a}
-                    </div>
-                  </details>
-                </div>
-              )) : (
-                <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <Brain className="mx-auto text-slate-300 mb-3" size={48} />
-                  <p className="text-slate-500 italic mb-4">No questions available for this text.</p>
-                  {ollamaModels.length > 0 ? (
+                  {/* Generator Controls */}
+                  <div className="flex gap-2 items-center">
+                    {ollamaModels.length > 0 && (
+                      <select
+                        value={selectedOllamaModel}
+                        onChange={(e) => setSelectedOllamaModel(e.target.value)}
+                        className="text-sm p-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
+                      </select>
+                    )}
                     <button
                       onClick={handleGenerateQuestions}
-                      disabled={isGeneratingQuestions}
-                      className="text-indigo-600 font-medium hover:underline"
+                      disabled={isGeneratingQuestions || ollamaModels.length === 0}
+                      className="text-sm bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg hover:bg-indigo-200 transition disabled:opacity-50 flex items-center gap-2"
                     >
-                      Generate some with AI?
+                      {isGeneratingQuestions ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                      Generate
                     </button>
-                  ) : (
-                    <p className="text-xs text-slate-400">Make sure Ollama is running to generate questions.</p>
-                  )}
+                  </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div>
-              <h1 className="text-3xl font-bold mb-6 text-slate-900">{activeText.title}</h1>
-              <div className="text-xl leading-loose text-slate-800 font-serif">
-                {tokens.map((token, index) => {
-                  const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-                  const isSaved = savedVocab.hasOwnProperty(cleanToken);
-                  const isTranslating = translatingWord === cleanToken;
-                  const isWord = /\w/.test(token); // Simple check if it's a word
 
-                  // Check if this token is currently being spoken
-                  const range = tokenRanges[index];
-                  const isCurrentSpeech = isSpeaking && currentSpeechIndex >= range.start && currentSpeechIndex < range.end;
+                {activeText.questions && activeText.questions.length > 0 ? activeText.questions.map((q, idx) => (
+                  <div key={idx} className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                    <p className="font-semibold text-slate-800 mb-3">{q.q}</p>
+                    <details className="text-slate-600">
+                      <summary className="cursor-pointer text-indigo-600 hover:text-indigo-800 text-sm font-medium">Show Answer</summary>
+                      <div className="mt-2 pl-4 border-l-2 border-indigo-200 italic">
+                        {q.a}
+                      </div>
+                    </details>
+                  </div>
+                )) : (
+                  <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <Brain className="mx-auto text-slate-300 mb-3" size={48} />
+                    <p className="text-slate-500 italic mb-4">No questions available for this text.</p>
+                    {ollamaModels.length > 0 ? (
+                      <button
+                        onClick={handleGenerateQuestions}
+                        disabled={isGeneratingQuestions}
+                        className="text-indigo-600 font-medium hover:underline"
+                      >
+                        Generate some with AI?
+                      </button>
+                    ) : (
+                      <p className="text-xs text-slate-400">Make sure Ollama is running to generate questions.</p>
+                    )}
+                  </div>
+                )
+                }
+              </div >
+            ) : (
+              <div>
+                <h1 className="text-3xl font-bold mb-6 text-slate-900">{activeText.title}</h1>
+                <div className="text-xl leading-loose text-slate-800 font-serif">
+                  {sentences.map((sentence, sIndex) => {
+                    const isCurrentSentence = sIndex === currentSentenceIndex;
+                    const isGenerating = generatingSentences.has(sIndex);
+                    const tokens = tokenize(sentence);
 
-                  if (!isWord) return <span key={index} className={isCurrentSpeech ? "bg-yellow-200" : ""}>{token}</span>;
+                    return (
+                      <div key={sIndex} className={`group relative transition-colors duration-300 rounded-lg py-2 px-1 -mx-1 ${isCurrentSentence ? 'bg-yellow-100' : 'hover:bg-slate-50'}`}>
+                        {/* Sentence Play Button - larger hit area */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            speak(activeText.content, sIndex);
+                          }}
+                          className={`absolute -left-10 top-1/2 -translate-y-1/2 p-2 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100 ${isCurrentSentence ? 'opacity-100 text-indigo-600' : ''}`}
+                          title="Play from here"
+                          disabled={isGenerating}
+                        >
+                          {isGenerating ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <Play size={16} className={isCurrentSentence && isPlaying ? "fill-current" : ""} />
+                          )}
+                        </button>
 
-                  return (
-                    <span
-                      key={index}
-                      onClick={() => toggleWord(cleanToken)}
-                      className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
-                        ${isCurrentSpeech ? 'bg-yellow-200' : (isSaved
-                          ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
-                          : 'hover:bg-indigo-100 active:bg-indigo-200')}
-                        ${isTranslating ? 'opacity-70 cursor-wait' : ''}`}
-                    >
-                      {token}
-                      {isTranslating && <Loader2 size={12} className="animate-spin" />}
+                        {tokens.map((token, tIndex) => {
+                          const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+                          const isSaved = savedVocab.hasOwnProperty(cleanToken);
+                          const isTranslating = translatingWord === cleanToken;
+                          const isWord = /\w/.test(token);
 
-                      {/* Tooltip */}
-                      {isSaved && savedVocab[cleanToken]?.definition && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-max max-w-[200px]">
-                          <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
-                            {savedVocab[cleanToken].definition}
-                          </div>
-                          {/* Arrow */}
-                          <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
-                        </div>
-                      )}
-                    </span>
-                  );
-                })}
+                          if (!isWord) return <span key={tIndex}>{token}</span>;
+
+                          return (
+                            <span
+                              key={tIndex}
+                              onClick={() => toggleWord(cleanToken)}
+                              className={`group/word relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
+                                        ${isSaved
+                                  ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
+                                  : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                                        ${isTranslating ? 'opacity-70 cursor-wait' : ''}`}
+                            >
+                              {token}
+                              {isSaved && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-8 text-sm text-slate-400 italic text-center">
+                  Click any word to highlight it and add it to your vocabulary list.
+                </p>
               </div>
-              <p className="mt-8 text-sm text-slate-400 italic text-center">
-                Click any word to highlight it and add it to your vocabulary list.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+            )
+          }
+        </div >
+      </div >
     );
   };
 

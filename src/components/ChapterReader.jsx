@@ -9,7 +9,7 @@ import { useTTS } from '../hooks/useTTS';
 
 export default function ChapterReader({ chapter, book, setView, setChapter, setActiveBook, setChatWidgetOpen, setChatInitialMessage }) {
     const { currentUser } = useAuth();
-    const { speak, cancel, isSpeaking, currentSpeechIndex } = useTTS();
+    const { speak, stop, isPlaying, isLoading, isModelLoading, currentSentenceIndex } = useTTS();
     const [savedVocab, setSavedVocab] = useState({});
     const [translatingWord, setTranslatingWord] = useState(null);
     const [showQuiz, setShowQuiz] = useState(false);
@@ -21,6 +21,9 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
     const [showingSimplified, setShowingSimplified] = useState(false);
     const [ollamaModels, setOllamaModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState('');
+    const [sentences, setSentences] = useState([]);
+
+    const contentToDisplay = showingSimplified ? simplifiedContent : chapter.content;
 
     useEffect(() => {
         fetchModels().then(models => {
@@ -37,13 +40,22 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         // In a real app, use a Context or global store.
     }, []);
 
+    // Split content into sentences for highlighting
+    useEffect(() => {
+        if (contentToDisplay) {
+            const segmenter = new Intl.Segmenter('de', { granularity: 'sentence' });
+            const segments = Array.from(segmenter.segment(contentToDisplay));
+            setSentences(segments.map(s => s.segment));
+        }
+    }, [contentToDisplay]);
+
     const tokenize = (str) => {
         return str.split(/([^\wäöüÄÖÜß]+)/);
     };
 
     const handleSpeak = () => {
-        if (isSpeaking) {
-            cancel();
+        if (isPlaying) {
+            stop();
         } else {
             speak(chapter.content);
         }
@@ -151,8 +163,6 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         }
     };
 
-
-
     const handleSimplify = async () => {
         if (!selectedModel) {
             alert("Please ensure Ollama is running and a model is selected.");
@@ -171,16 +181,6 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         }
     };
 
-    const contentToDisplay = showingSimplified ? simplifiedContent : chapter.content;
-    const tokens = tokenize(contentToDisplay || "");
-
-    // Calculate cumulative lengths for mapping charIndex to token
-    let charCount = 0;
-    const tokenRanges = tokens.map(token => {
-        const start = charCount;
-        charCount += token.length;
-        return { start, end: charCount };
-    });
 
     return (
         <div
@@ -245,12 +245,18 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                         </button>
                     )}
 
+                    {isModelLoading && (
+                        <span className="text-xs text-slate-500 flex items-center gap-1 mr-2">
+                            <Loader2 size={12} className="animate-spin" /> Loading Model...
+                        </span>
+                    )}
                     <button
                         onClick={handleSpeak}
-                        className={`p-2 rounded-full transition-colors ${isSpeaking ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
-                        title={isSpeaking ? "Stop Reading" : "Read Aloud"}
+                        className={`p-2 rounded-full transition-colors ${isPlaying ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                        title={isPlaying ? "Stop Reading" : "Read Aloud"}
+                        disabled={isModelLoading}
                     >
-                        <Volume2 size={20} className={isSpeaking ? "animate-pulse" : ""} />
+                        {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Volume2 size={20} className={isPlaying ? "animate-pulse" : ""} />}
                     </button>
                 </div>
             </div>
@@ -258,41 +264,46 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
             {/* Content */}
             <div className="p-8 md:p-12 flex-grow overflow-y-auto">
                 <div className="text-xl leading-loose text-slate-800 font-serif">
-                    {tokens.map((token, index) => {
-                        const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-                        const isTranslating = translatingWord === cleanToken;
-                        const isWord = /\w/.test(token);
-                        const isSaved = savedVocab[cleanToken];
-
-                        // Check if this token is currently being spoken
-                        const range = tokenRanges[index];
-                        const isCurrentSpeech = isSpeaking && currentSpeechIndex >= range.start && currentSpeechIndex < range.end;
-
-                        if (!isWord) return <span key={index} className={isCurrentSpeech ? "bg-yellow-200" : ""}>{token}</span>;
+                    {sentences.map((sentence, sIndex) => {
+                        const isCurrentSentence = sIndex === currentSentenceIndex;
+                        const tokens = tokenize(sentence);
 
                         return (
-                            <span
-                                key={index}
-                                onClick={() => toggleWord(cleanToken)}
-                                className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
-                            ${isCurrentSpeech ? 'bg-yellow-200' : (isSaved
-                                        ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
-                                        : 'hover:bg-indigo-100 active:bg-indigo-200')}
-                            ${isTranslating ? 'opacity-70 cursor-wait' : ''}
-                        `}
-                            >
-                                {token}
-                                {isTranslating && <Loader2 size={12} className="animate-spin" />}
+                            <span key={sIndex} className={`transition-colors duration-300 ${isCurrentSentence ? 'bg-yellow-100 rounded px-1 -mx-1' : ''}`}>
+                                {tokens.map((token, tIndex) => {
+                                    const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+                                    const isTranslating = translatingWord === cleanToken;
+                                    const isWord = /\w/.test(token);
+                                    const isSaved = savedVocab[cleanToken];
 
-                                {/* Tooltip */}
-                                {isSaved && (
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-max max-w-[200px]">
-                                        <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
-                                            {savedVocab[cleanToken].definition}
-                                        </div>
-                                        <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
-                                    </div>
-                                )}
+                                    if (!isWord) return <span key={`${sIndex}-${tIndex}`}>{token}</span>;
+
+                                    return (
+                                        <span
+                                            key={`${sIndex}-${tIndex}`}
+                                            onClick={() => toggleWord(cleanToken, sentence)}
+                                            className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
+                                        ${isSaved
+                                                    ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
+                                                    : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                                        ${isTranslating ? 'opacity-70 cursor-wait' : ''}
+                                    `}
+                                        >
+                                            {token}
+                                            {isTranslating && <Loader2 size={12} className="animate-spin" />}
+
+                                            {/* Tooltip */}
+                                            {isSaved && (
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-max max-w-[200px]">
+                                                    <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
+                                                        {savedVocab[cleanToken].definition}
+                                                    </div>
+                                                    <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+                                                </div>
+                                            )}
+                                        </span>
+                                    );
+                                })}
                             </span>
                         );
                     })}
