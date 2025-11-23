@@ -4,6 +4,7 @@ import { Mic, MicOff, Play, Download, Loader2, CheckCircle, AlertCircle, Volume2
 import { useAuth } from '../contexts/AuthContext';
 import { recordActivitySession, CATEGORIES } from '../services/activityTracker';
 import { fetchModels, generateRolePlayResponse, generateHint } from '../services/ollama';
+import { useTTS } from '../hooks/useTTS';
 
 // Configure transformers.js
 env.allowLocalModels = false;
@@ -49,6 +50,9 @@ const SpeakingPractice = () => {
     const [isWaitingForAI, setIsWaitingForAI] = useState(false);
     const [hints, setHints] = useState([]);
     const [showHints, setShowHints] = useState(false);
+
+    // TTS Hook
+    const { speak, stop: stopTTS, isPlaying: isTTSPlaying, isModelLoading: isTTSLoading } = useTTS();
 
     // Refs for non-render state
     const transcriberRef = useRef(null);
@@ -140,6 +144,7 @@ const SpeakingPractice = () => {
 
     // --- Audio Logic ---
     const startRecording = async () => {
+        stopTTS(); // Stop TTS when user starts speaking
         if (isRecordingRef.current) return;
         if (!transcriberRef.current && !useFallback) return;
 
@@ -316,6 +321,7 @@ const SpeakingPractice = () => {
         try {
             const aiResponseText = await generateRolePlayResponse([...chatHistory, userMsg], scenario.name, selectedModel);
             setChatHistory(prev => [...prev, { role: 'assistant', content: aiResponseText }]);
+            speak(aiResponseText); // Auto-play AI response
         } catch (error) {
             console.error("Roleplay error:", error);
             setChatHistory(prev => [...prev, { role: 'assistant', content: "(Error: Could not connect to AI)" }]);
@@ -623,6 +629,15 @@ const SpeakingPractice = () => {
                                                 : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'
                                                 }`}>
                                                 {msg.content}
+                                                {msg.role === 'assistant' && (
+                                                    <button
+                                                        onClick={() => speak(msg.content)}
+                                                        className="ml-2 p-1 text-indigo-400 hover:text-indigo-600 transition opacity-50 hover:opacity-100"
+                                                        title="Replay"
+                                                    >
+                                                        <Volume2 size={14} />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
