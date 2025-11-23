@@ -23,8 +23,16 @@ import {
   Book, // Import Book icon
   MessageCircle,
   Mic,
-  TrendingUp
+  TrendingUp,
+  Upload,
+  FileText
 } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import ePub from 'epubjs';
+
+// Set worker source for pdfjs
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginView from './components/LoginView';
 import { db } from './firebase';
@@ -42,7 +50,7 @@ import {
 } from 'firebase/firestore';
 import { translateWord } from './services/translation';
 import { generateStory as generateGeminiStory } from './services/gemini';
-import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels } from './services/ollama';
+import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels, simplifyStory } from './services/ollama';
 
 import FlashcardView from './components/FlashcardView';
 import LibraryView from './components/LibraryView';
@@ -252,35 +260,204 @@ function AuthenticatedApp() {
     }
   };
 
-  const addNewText = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+  const AddTextView = () => {
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [title, setTitle] = useState('');
+    const [content, setContent] = useState('');
+    const [level, setLevel] = useState('A2');
 
-    try {
-      console.log("Adding new text for user:", currentUser?.uid);
+    const handleFileUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-      if (!currentUser) {
-        throw new Error("No authenticated user found!");
+      setIsProcessing(true);
+      try {
+        if (file.type === 'application/pdf') {
+          await processPDF(file);
+        } else if (file.type === 'application/epub+zip') {
+          await processEPUB(file);
+        } else {
+          alert('Please upload a PDF or EPUB file.');
+        }
+      } catch (error) {
+        console.error('Error processing file:', error);
+        alert('Failed to process file. Please try again.');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    const processPDF = async (file) => {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        fullText += pageText + '\n\n';
       }
 
-      // Create a reference with an auto-generated ID
-      const newDocRef = doc(collection(db, 'users', currentUser.uid, 'texts'));
+      setTitle(file.name.replace('.pdf', ''));
+      setContent(fullText.trim());
+    };
 
-      // Write to Firestore (Blocking - wait for server response)
-      await setDoc(newDocRef, {
-        title: formData.get('title'),
-        level: formData.get('level'),
-        content: formData.get('content'),
-        questions: [], // Simplified for now
-        createdAt: serverTimestamp()
-      });
+    const processEPUB = async (file) => {
+      const book = ePub(file);
+      await book.ready;
 
-      console.log("Text added successfully with ID:", newDocRef.id);
-      setView('library');
-    } catch (error) {
-      console.error("Error adding text: ", error);
-      alert(`Failed to save text: ${error.message}`);
-    }
+      // Try to get metadata for title
+      const metadata = await book.loaded.metadata;
+      if (metadata && metadata.title) {
+        setTitle(metadata.title);
+      } else {
+        setTitle(file.name.replace('.epub', ''));
+      }
+
+      // Extract text from all chapters
+      let fullText = '';
+      // Simplified extraction: iterate over spine items
+      // Note: This might be slow for large books and is a basic implementation
+      const spine = book.spine;
+      for (const item of spine.items) {
+        try {
+          // Load the chapter
+          const chapter = await book.load(item.href);
+          // If it's a document, get text content
+          if (chapter instanceof Document) {
+            fullText += chapter.body.textContent + '\n\n';
+          } else if (typeof chapter === 'string') {
+            // Sometimes it returns HTML string
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(chapter, 'text/html');
+            fullText += doc.body.textContent + '\n\n';
+          }
+        } catch (e) {
+          console.warn("Could not load chapter", item.href, e);
+        }
+      }
+
+      // Fallback if spine iteration fails or yields nothing (common in some epubs)
+      if (!fullText.trim()) {
+        // Try getting locations and text from there? 
+        // Or just alert user that auto-extraction failed for this specific epub format
+        console.warn("Complex EPUB extraction not fully implemented for all formats.");
+      }
+
+      setContent(fullText.trim());
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      // Use the existing addNewText logic but with local state
+      // We need to call the original addNewText or replicate it.
+      // Since addNewText takes an event, let's just replicate the logic here for clarity
+      // or wrap it. The original addNewText uses formData from e.target.
+
+      // Let's just create a synthetic event or modify addNewText to accept data.
+      // Easier: Replicate logic here since we have state.
+
+      try {
+        if (!currentUser) throw new Error("No authenticated user!");
+
+        const newDocRef = doc(collection(db, 'users', currentUser.uid, 'texts'));
+        await setDoc(newDocRef, {
+          title: title,
+          level: level,
+          content: content,
+          questions: [],
+          createdAt: serverTimestamp()
+        });
+
+        console.log("Text added with ID:", newDocRef.id);
+        setView('library');
+      } catch (error) {
+        console.error("Error adding text:", error);
+        alert(`Failed to save text: ${error.message}`);
+      }
+    };
+
+    return (
+      <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm">
+        <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
+          <Plus className="text-indigo-600" /> Add New Text
+        </h2>
+
+        {/* File Upload Section */}
+        <div className="mb-8 p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center hover:border-indigo-300 transition-colors">
+          <input
+            type="file"
+            accept=".pdf,.epub"
+            onChange={handleFileUpload}
+            className="hidden"
+            id="file-upload"
+            disabled={isProcessing}
+          />
+          <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+            {isProcessing ? (
+              <Loader2 className="animate-spin text-indigo-600" size={32} />
+            ) : (
+              <Upload className="text-indigo-400" size={32} />
+            )}
+            <span className="font-medium text-slate-700">
+              {isProcessing ? "Processing file..." : "Click to upload PDF or EPUB"}
+            </span>
+            <span className="text-xs text-slate-400">
+              We'll automatically extract the title and content.
+            </span>
+          </label>
+        </div>
+
+        <div className="relative flex py-2 items-center mb-6">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">Or enter manually</span>
+          <div className="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+            <input
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="e.g., My Favorite Hobby"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+            >
+              <option value="A1">A1 (Beginner)</option>
+              <option value="A2">A2 (Elementary)</option>
+              <option value="B1">B1 (Intermediate)</option>
+              <option value="B2">B2 (Upper Intermediate)</option>
+              <option value="C1">C1 (Advanced)</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Content</label>
+            <textarea
+              required
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows="10"
+              className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
+              placeholder="Paste German text here..."
+            ></textarea>
+          </div>
+          <div className="flex justify-end gap-3 pt-4">
+            <button type="button" onClick={() => setView('library')} className="px-4 py-2 text-slate-600 hover:text-slate-800">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save Text</button>
+          </div>
+        </form>
+      </div>
+    );
   };
 
   const seedLibrary = async () => {
@@ -358,6 +535,15 @@ function AuthenticatedApp() {
     const [selectedOllamaModel, setSelectedOllamaModel] = useState('');
     const [generating, setGenerating] = useState(false);
     const [generatedStory, setGeneratedStory] = useState(null);
+
+    // Check for pre-filled topic from library generate box
+    useEffect(() => {
+      const savedTopic = localStorage.getItem('generatorTopic');
+      if (savedTopic) {
+        setTopic(savedTopic);
+        localStorage.removeItem('generatorTopic'); // Clear it after using
+      }
+    }, []);
 
     useEffect(() => {
       if (provider === 'ollama') {
@@ -554,22 +740,42 @@ function AuthenticatedApp() {
 
   const ReaderView = () => {
     if (!activeText) return null;
-    const tokens = tokenize(activeText.content);
     const [selection, setSelection] = useState(null);
     const [ollamaModels, setOllamaModels] = useState([]);
     const [selectedOllamaModel, setSelectedOllamaModel] = useState('');
     const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+    const [simplifiedContent, setSimplifiedContent] = useState(null);
+    const [isSimplifying, setIsSimplifying] = useState(false);
+    const [showingSimplified, setShowingSimplified] = useState(false);
+
+    const tokens = tokenize(showingSimplified ? simplifiedContent : activeText.content);
 
     useEffect(() => {
-      if (showQuiz) {
-        import('./services/ollama').then(({ fetchModels }) => {
-          fetchModels().then(models => {
-            setOllamaModels(models);
-            if (models.length > 0) setSelectedOllamaModel(models[0].name);
-          });
+      if (showQuiz || !selectedOllamaModel) {
+        fetchOllamaModels().then(models => {
+          setOllamaModels(models);
+          if (models.length > 0 && !selectedOllamaModel) setSelectedOllamaModel(models[0].name);
         });
       }
     }, [showQuiz]);
+
+    const handleSimplify = async () => {
+      if (!selectedOllamaModel) {
+        alert("Please ensure Ollama is running and a model is selected.");
+        return;
+      }
+      setIsSimplifying(true);
+      try {
+        const simplified = await simplifyStory(activeText.content, "A1", selectedOllamaModel);
+        setSimplifiedContent(simplified);
+        setShowingSimplified(true);
+      } catch (error) {
+        console.error("Simplification failed:", error);
+        alert("Failed to simplify story. Check console.");
+      } finally {
+        setIsSimplifying(false);
+      }
+    };
 
     const handleGenerateQuestions = async () => {
       if (!selectedOllamaModel) return;
@@ -635,7 +841,7 @@ function AuthenticatedApp() {
       if (isSpeaking) {
         cancel();
       } else {
-        speak(activeText.content);
+        speak(showingSimplified ? simplifiedContent : activeText.content);
       }
     };
 
@@ -665,7 +871,38 @@ function AuthenticatedApp() {
           <button onClick={() => setView('library')} className="text-slate-500 hover:text-slate-800 flex items-center gap-1">
             <ChevronLeft size={18} /> Library
           </button>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* Simplification Controls */}
+            {simplifiedContent ? (
+              <button
+                onClick={() => setShowingSimplified(!showingSimplified)}
+                className={`p-2 rounded-full transition ${showingSimplified ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-200 text-slate-700'}`}
+                title={showingSimplified ? "Show Original" : "Show Simplified"}
+              >
+                <RotateCcw size={20} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSimplify}
+                disabled={isSimplifying || ollamaModels.length === 0}
+                className={`p-2 rounded-full transition ${isSimplifying ? 'bg-indigo-50 text-indigo-400' : 'hover:bg-slate-200 text-slate-700'}`}
+                title="Simplify Text (AI)"
+              >
+                {isSimplifying ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+              </button>
+            )}
+
+            {/* Model Selector (Hidden if only 1 or empty, or maybe show small?) */}
+            {ollamaModels.length > 0 && !showQuiz && (
+              <select
+                value={selectedOllamaModel}
+                onChange={(e) => setSelectedOllamaModel(e.target.value)}
+                className="text-xs p-1 border border-slate-200 rounded bg-white max-w-[100px] hidden md:block"
+              >
+                {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
+              </select>
+            )}
+
             <button
               onClick={handleSpeak}
               className={`p-2 rounded-full transition ${isSpeaking
@@ -800,35 +1037,7 @@ function AuthenticatedApp() {
 
 
 
-  const AddTextView = () => (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm">
-      <h2 className="text-2xl font-bold mb-6 text-slate-800">Add New Text</h2>
-      <form onSubmit={addNewText} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
-          <input required name="title" className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g., My Favorite Hobby" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
-          <select name="level" className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none">
-            <option value="A1">A1</option>
-            <option value="A2">A2</option>
-            <option value="B1">B1</option>
-            <option value="B2">B2</option>
-            <option value="C1">C1</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">German Text</label>
-          <textarea required name="content" rows="10" className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Paste German text here..."></textarea>
-        </div>
-        <div className="flex justify-end gap-3 pt-4">
-          <button type="button" onClick={() => setView('library')} className="px-4 py-2 text-slate-600 hover:text-slate-800">Cancel</button>
-          <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save Text</button>
-        </div>
-      </form>
-    </div>
-  );
+
 
   // --- MAIN LAYOUT ---
   return (
@@ -930,6 +1139,14 @@ function AuthenticatedApp() {
               onToggleRead={handleToggleRead}
               onSeed={seedLibrary}
               onAdd={() => setView('add')}
+              onGenerate={(topic) => {
+                // Store the topic and navigate to generator view
+                if (topic) {
+                  // We can use localStorage to pass the topic to the generator
+                  localStorage.setItem('generatorTopic', topic);
+                }
+                setView('generator');
+              }}
             />
           )}
           {view === 'reader' && <ReaderView />}

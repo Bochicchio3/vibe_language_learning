@@ -151,3 +151,115 @@ Do not include markdown formatting (like \`\`\`json) in the response. Just the r
     }
 };
 
+export const simplifyStory = async (text, level = "A2", model) => {
+    const systemPrompt = `
+You are a German language teacher.
+Rewrite the following text to be suitable for a learner at the ${level} level.
+Keep the meaning of the story but use simpler vocabulary and grammar.
+IMPORTANT: Return ONLY the simplified text. Do not include any intro or outro.
+`;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: text }
+                ],
+                stream: false
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ollama API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        return data.message?.content || "Failed to simplify text.";
+
+    } catch (error) {
+        console.error('Error simplifying story with Ollama:', error);
+        throw error;
+    }
+};
+
+
+export const generateFlashcards = async (topic, count = 10, level = "A2", model) => {
+    const systemPrompt = `
+You are a German language teacher.
+Generate ${count} German vocabulary flashcards related to the topic "${topic}" for a learner at the ${level} level.
+Each flashcard must include:
+- "word": The German word or phrase (with article if noun).
+- "definition": The English translation.
+- "context": A simple example sentence in German using the word.
+- "gender": "der", "die", "das", or null (if not a noun).
+
+IMPORTANT: Return ONLY a valid JSON array of objects.
+Example:
+[
+  { "word": "der Apfel", "definition": "the apple", "context": "Ich esse einen Apfel.", "gender": "der" },
+  { "word": "laufen", "definition": "to run", "context": "Er läuft schnell.", "gender": null }
+]
+Do not include any markdown formatting like \`\`\`json. Just the raw JSON array.
+`;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: "Generate the flashcards now." }
+                ],
+                stream: false,
+                format: "json"
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ollama API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        let jsonStr = data.message?.content;
+
+        if (!jsonStr) {
+            throw new Error("No content in response");
+        }
+
+        console.log("Raw Ollama Response (Flashcards):", jsonStr);
+
+        // Cleanup if model adds markdown despite instructions
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonStr);
+        } catch (e) {
+            console.error("JSON Parse Error:", e);
+            throw new Error(`Failed to parse JSON response: ${jsonStr.substring(0, 50)}...`);
+        }
+
+        // Normalize output
+        if (Array.isArray(parsed)) {
+            return parsed;
+        } else if (parsed && typeof parsed === 'object') {
+            if (Array.isArray(parsed.flashcards)) return parsed.flashcards;
+            if (Array.isArray(parsed.cards)) return parsed.cards;
+        }
+
+        console.warn("Unexpected JSON structure:", parsed);
+        throw new Error("Response was not a list of flashcards.");
+
+    } catch (error) {
+        console.error('Error generating flashcards with Ollama:', error);
+        throw error;
+    }
+};

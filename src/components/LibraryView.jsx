@@ -11,7 +11,8 @@ import {
     Circle,
     Book,
     BarChart2,
-    AlertCircle
+    AlertCircle,
+    Sparkles
 } from 'lucide-react';
 
 export default function LibraryView({
@@ -21,11 +22,12 @@ export default function LibraryView({
     onDelete,
     onToggleRead,
     onSeed,
-    onAdd
+    onAdd,
+    onGenerate
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLevels, setSelectedLevels] = useState([]);
-    const [selectedStatuses, setSelectedStatuses] = useState([]); 
+    const [selectedStatuses, setSelectedStatuses] = useState([]);
 
     // --- HELPERS ---
     const getWordCount = (text) => text.split(/\s+/).length;
@@ -98,6 +100,67 @@ export default function LibraryView({
                 return [...prev, status];
             }
         });
+    };
+
+    // GenerateBox Component
+    const GenerateBox = ({ onGenerate }) => {
+        const [topic, setTopic] = useState('');
+
+        const handleSubmit = (e) => {
+            e.preventDefault();
+            if (onGenerate) {
+                onGenerate(topic);
+            }
+        };
+
+        return (
+            <div className="group bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-6 shadow-sm border-2 border-transparent hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                {/* Animated gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                {/* Sparkle decorations */}
+                <div className="absolute top-4 right-4">
+                    <Sparkles className="text-white/30 group-hover:text-white/50 transition-colors" size={28} />
+                </div>
+                <div className="absolute bottom-4 left-4">
+                    <Sparkles className="text-white/20 group-hover:text-white/40 transition-colors" size={20} />
+                </div>
+
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                            <Sparkles className="text-white" size={24} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-xl text-white">Generate Story</h3>
+                            <p className="text-white/80 text-xs">AI-powered German text</p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-3">
+                        <input
+                            type="text"
+                            value={topic}
+                            onChange={(e) => setTopic(e.target.value)}
+                            placeholder="Enter a topic (optional)..."
+                            className="w-full p-3 bg-white/90 backdrop-blur-sm border-none rounded-lg text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-white focus:bg-white transition outline-none"
+                        />
+
+                        <button
+                            type="submit"
+                            className="w-full py-3 bg-white text-indigo-600 rounded-lg font-bold hover:bg-white/90 transition shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                        >
+                            <Sparkles size={18} />
+                            Generate
+                        </button>
+                    </form>
+
+                    <p className="text-white/60 text-[10px] mt-3 text-center italic">
+                        Create custom German texts at your level
+                    </p>
+                </div>
+            </div>
+        );
     };
 
     // --- DERIVED STATE ---
@@ -182,8 +245,8 @@ export default function LibraryView({
                                     key={level}
                                     onClick={() => toggleLevel(level)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition whitespace-nowrap ${isSelected
-                                            ? 'bg-slate-800 text-white shadow-md'
-                                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                        ? 'bg-slate-800 text-white shadow-md'
+                                        : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
                                         }`}
                                 >
                                     {level}
@@ -202,8 +265,8 @@ export default function LibraryView({
                                     key={status}
                                     onClick={() => toggleStatus(status)}
                                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition whitespace-nowrap ${isSelected
-                                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                                         }`}
                                 >
                                     {status}
@@ -227,6 +290,9 @@ export default function LibraryView({
                 </div>
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Generate Box - First Item */}
+                    {onGenerate && <GenerateBox onGenerate={onGenerate} />}
+
                     {filteredTexts.map(text => {
                         const stats = getTextStats(text);
                         const difficultyColor = getDifficultyColor(stats.unknownPercent, text.isRead);
@@ -256,8 +322,8 @@ export default function LibraryView({
                                                     onToggleRead(text.id, !text.isRead);
                                                 }}
                                                 className={`p-2 rounded-full transition ${text.isRead
-                                                        ? 'text-green-500 bg-green-50 hover:bg-green-100'
-                                                        : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'
+                                                    ? 'text-green-500 bg-green-50 hover:bg-green-100'
+                                                    : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'
                                                     }`}
                                                 title={text.isRead ? "Mark as Unread" : "Mark as Read"}
                                             >

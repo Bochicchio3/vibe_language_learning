@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Volume2, Brain, Loader2, CheckCircle, ArrowRight, MessageCircle } from 'lucide-react';
+import { ChevronLeft, Volume2, Brain, Loader2, CheckCircle, ArrowRight, MessageCircle, Sparkles, RotateCcw } from 'lucide-react';
 import { doc, updateDoc, arrayUnion, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { translateWord } from '../services/translation';
+import { simplifyStory, fetchModels } from '../services/ollama';
 import { useTTS } from '../hooks/useTTS';
 
 export default function ChapterReader({ chapter, book, setView, setChapter, setActiveBook, setChatWidgetOpen, setChatInitialMessage }) {
@@ -13,7 +14,20 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
     const [translatingWord, setTranslatingWord] = useState(null);
     const [showQuiz, setShowQuiz] = useState(false);
     const [completing, setCompleting] = useState(false);
+
     const [selection, setSelection] = useState(null);
+    const [simplifiedContent, setSimplifiedContent] = useState(null);
+    const [isSimplifying, setIsSimplifying] = useState(false);
+    const [showingSimplified, setShowingSimplified] = useState(false);
+    const [ollamaModels, setOllamaModels] = useState([]);
+    const [selectedModel, setSelectedModel] = useState('');
+
+    useEffect(() => {
+        fetchModels().then(models => {
+            setOllamaModels(models);
+            if (models.length > 0) setSelectedModel(models[0].name);
+        });
+    }, []);
 
     // Load saved vocab (simplified - ideally passed from parent or context to avoid refetching)
     useEffect(() => {
@@ -137,7 +151,28 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         }
     };
 
-    const tokens = tokenize(chapter.content);
+
+
+    const handleSimplify = async () => {
+        if (!selectedModel) {
+            alert("Please ensure Ollama is running and a model is selected.");
+            return;
+        }
+        setIsSimplifying(true);
+        try {
+            const simplified = await simplifyStory(chapter.content, "A1", selectedModel);
+            setSimplifiedContent(simplified);
+            setShowingSimplified(true);
+        } catch (error) {
+            console.error("Simplification failed:", error);
+            alert("Failed to simplify story. Check console.");
+        } finally {
+            setIsSimplifying(false);
+        }
+    };
+
+    const contentToDisplay = showingSimplified ? simplifiedContent : chapter.content;
+    const tokens = tokenize(contentToDisplay || "");
 
     // Calculate cumulative lengths for mapping charIndex to token
     let charCount = 0;
@@ -178,7 +213,38 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                 <div className="font-bold text-slate-700">
                     Chapter {chapter.number}: {chapter.title}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    {ollamaModels.length > 0 && (
+                        <div className="hidden md:flex items-center gap-1">
+                            <select
+                                value={selectedModel}
+                                onChange={(e) => setSelectedModel(e.target.value)}
+                                className="text-xs p-1 border border-slate-200 rounded bg-white max-w-[100px]"
+                            >
+                                {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
+                            </select>
+                        </div>
+                    )}
+
+                    {simplifiedContent ? (
+                        <button
+                            onClick={() => setShowingSimplified(!showingSimplified)}
+                            className={`p-2 rounded-full transition-colors ${showingSimplified ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                            title={showingSimplified ? "Show Original" : "Show Simplified"}
+                        >
+                            <RotateCcw size={20} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleSimplify}
+                            disabled={isSimplifying || ollamaModels.length === 0}
+                            className={`p-2 rounded-full transition-colors ${isSimplifying ? 'bg-indigo-50 text-indigo-400' : 'hover:bg-slate-200 text-slate-700'}`}
+                            title="Simplify Text (AI)"
+                        >
+                            {isSimplifying ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+                        </button>
+                    )}
+
                     <button
                         onClick={handleSpeak}
                         className={`p-2 rounded-full transition-colors ${isSpeaking ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
