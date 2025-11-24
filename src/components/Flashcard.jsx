@@ -50,7 +50,7 @@ export default function Flashcard({ word, onGrade }) {
     }, [isFlipped, onGrade]);
 
     const handleDragEnd = (event, info) => {
-        const threshold = 100;
+        const threshold = 50;
         const xOffset = info.offset.x;
         const yOffset = info.offset.y;
 
@@ -79,7 +79,7 @@ export default function Flashcard({ word, onGrade }) {
     if (!word) return null;
 
     return (
-        <div className="max-w-md mx-auto perspective-1000 w-full h-[500px] flex items-center justify-center relative">
+        <div className="max-w-md mx-auto perspective-1000 w-full h-[60vh] min-h-[400px] max-h-[600px] flex items-center justify-center relative">
             {/* Background indicators for swipe */}
             <div className="absolute inset-0 flex justify-between items-center px-8 pointer-events-none z-0">
                 <div className={`text-4xl font-bold text-rose-500 transition-opacity duration-200 ${x.get() < -50 ? 'opacity-100' : 'opacity-0'}`}>AGAIN</div>
@@ -94,12 +94,13 @@ export default function Flashcard({ word, onGrade }) {
                 style={{ x, y, rotate, opacity, touchAction: 'none' }}
                 drag
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.7}
                 onDragEnd={handleDragEnd}
                 className="relative w-full h-full cursor-grab active:cursor-grabbing z-10"
             >
                 <motion.div
                     className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}
-                    onClick={() => !isFlipped && setIsFlipped(true)}
+                    onTap={() => !isFlipped && setIsFlipped(true)}
                 >
                     {/* Front */}
                     <motion.div
