@@ -27,7 +27,8 @@ import {
   Upload,
   FileText,
   PenTool,
-  Play
+  Play,
+  MoreVertical
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import ePub from 'epubjs';
@@ -48,11 +49,13 @@ import {
   orderBy,
   addDoc,
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  getDoc
 } from 'firebase/firestore';
 import { translateWord } from './services/translation';
 import { generateStory as generateGeminiStory } from './services/gemini';
-import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels, simplifyStory } from './services/ollama';
+import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels, simplifyStory, adaptContent } from './services/ollama';
+import { extractTextFromPDF, chunkText } from './services/pdfProcessor';
 
 import FlashcardView from './components/FlashcardView';
 import LibraryView from './components/LibraryView';
@@ -63,6 +66,9 @@ import WritingPractice from './components/WritingPractice';
 import { isDue } from './services/srs';
 import { recordActivitySession, recordReadingSession, CATEGORIES } from './services/activityTracker';
 import { useTTS } from './hooks/useTTS';
+import JourneyView from './components/JourneyView';
+import { useGamification } from './hooks/useGamification';
+import { StreakCounter, XPBar, LevelBadge } from './components/GamificationComponents';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---
 const INITIAL_TEXTS = [
@@ -110,7 +116,7 @@ const SAMPLE_TEXTS = [
 
 function AuthenticatedApp() {
   // --- STATE ---
-  const [view, setView] = useState('library'); // 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail'
+  const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail'
   const [texts, setTexts] = useState([]);
   const [activeTextId, setActiveTextId] = useState(null);
   const [activeBook, setActiveBook] = useState(null); // New state for active book
@@ -125,7 +131,8 @@ function AuthenticatedApp() {
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [chatInitialMessage, setChatInitialMessage] = useState('');
   const [readingSessionStart, setReadingSessionStart] = useState(null);
-  const { logout, currentUser } = useAuth();
+  const { logout, currentUser, userStats, updateStats } = useAuth();
+  const { level, nextLevelXp, progressToNext } = useGamification(userStats);
 
   // --- FIRESTORE SYNC ---
   useEffect(() => {
@@ -201,6 +208,26 @@ function AuthenticatedApp() {
     }
   }, [view, currentUser]);
 
+  const handleSaveText = async ({ title, content, level }) => {
+    try {
+      if (!currentUser) throw new Error("No authenticated user!");
+      const newDocRef = doc(collection(db, 'users', currentUser.uid, 'texts'));
+      await setDoc(newDocRef, {
+        title,
+        level,
+        content,
+        questions: [],
+        createdAt: serverTimestamp(),
+        isRead: false
+      });
+      return newDocRef.id;
+    } catch (error) {
+      console.error("Error adding text:", error);
+      alert(`Failed to save text: ${error.message}`);
+      throw error;
+    }
+  };
+
   // --- HELPERS ---
   const dueCount = Object.values(savedVocab).filter(word => isDue(word.srs)).length;
   const activeText = texts.find(t => t.id === activeTextId);
@@ -243,7 +270,9 @@ function AuthenticatedApp() {
         // 3. Fetch Translation
         let translation = "";
         try {
+          console.log("[toggleWord] Fetching translation for:", cleanWord);
           translation = await translateWord(cleanWord, contextSentence);
+          console.log("[toggleWord] Translation received:", translation);
         } catch (err) {
           console.error("Translation error", err);
         }
@@ -254,138 +283,276 @@ function AuthenticatedApp() {
           context: contextSentence,
           createdAt: serverTimestamp()
         });
+        console.log("[toggleWord] Returning translation:", translation);
+
+        // Update local state for tooltip
+        setSavedVocab(prev => ({
+          ...prev,
+          [cleanWord]: { definition: translation }
+        }));
+
+        return translation;
       } catch (error) {
         console.error("Error saving word:", error);
         alert("Could not save word. Check console for details.");
+        return null;
       } finally {
         setTranslatingWord(null);
       }
+    }
+    return null;
+  };
+  // Background Processing State
+  const [backgroundTask, setBackgroundTask] = useState(null); // { bookId, totalChapters, completedChapters, status: 'running' | 'completed' | 'error' }
+  const [processLogs, setProcessLogs] = useState([]);
+  const [abortController, setAbortController] = useState(null);
+
+  const processRemainingChapters = async (bookId, chapters, startIndex, level, model) => {
+    console.log("Starting background adaptation for book:", bookId);
+
+    for (let i = startIndex; i < chapters.length; i++) {
+      // Check if aborted (we need a ref or a global controller, using the state one might be tricky if it updates)
+      // For simplicity, we'll check the current controller state if possible, or just let it run.
+      // Better: Pass the signal to this function.
+    }
+  };
+
+  const startBackgroundImport = async (title, level, chunks, shouldAdapt, model, targetLanguage = "German") => {
+    setIsSyncing(true);
+    setProcessLogs([]);
+    const controller = new AbortController();
+    setAbortController(controller);
+
+    try {
+      // 1. Save the book IMMEDIATELY (all raw)
+      const newBookRef = doc(collection(db, 'users', currentUser.uid, 'books'));
+      const newBook = {
+        id: newBookRef.id,
+        title,
+        level,
+        targetLanguage, // Store target language
+        chapters: chunks, // Start with raw chunks
+        totalChapters: chunks.length,
+        createdAt: serverTimestamp(),
+        isAdapted: shouldAdapt,
+        currentProcessingChapter: shouldAdapt ? 1 : null, // Start processing Ch 1 immediately
+        originalFile: 'Imported'
+      };
+
+      await setDoc(newBookRef, newBook);
+
+      // 2. Redirect user immediately
+      setActiveBook(newBook);
+      setView('book_detail');
+      setIsSyncing(false);
+
+      // 3. Start background process for ALL chapters (starting from 0)
+      if (shouldAdapt && model && chunks.length > 0) {
+        // Fire and forget (don't await)
+        (async () => {
+          const bookId = newBookRef.id;
+          console.log("Starting background processing for", bookId);
+
+          for (let i = 0; i < chunks.length; i++) {
+            if (controller.signal.aborted) break;
+
+            try {
+              // Update current processing chapter
+              await updateDoc(newBookRef, { currentProcessingChapter: i + 1 });
+
+              const chunk = chunks[i];
+              const result = await adaptContent(chunk.content, level, model, targetLanguage);
+              const content = typeof result === 'object' ? result.content : result;
+              const reasoning = typeof result === 'object' ? result.reasoning : "No reasoning provided";
+
+              // Update Firestore with the new chapter
+              const bookSnap = await getDoc(newBookRef);
+              if (bookSnap.exists()) {
+                const currentChapters = bookSnap.data().chapters;
+                currentChapters[i] = { ...chunk, content, isAdapted: true };
+
+                await updateDoc(newBookRef, {
+                  chapters: currentChapters,
+                  currentProcessingChapter: i + 1 < chunks.length ? i + 2 : null // Update to next or null if done
+                });
+
+                setProcessLogs(prev => [...prev, {
+                  chunkId: i + 1,
+                  title: chunk.title,
+                  reasoning: reasoning,
+                  timestamp: new Date().toLocaleTimeString()
+                }]);
+              }
+
+            } catch (err) {
+              console.error(`Background adaptation failed for Ch ${i + 1}`, err);
+            }
+          }
+
+          // Mark as complete
+          await updateDoc(newBookRef, { currentProcessingChapter: null });
+          console.log("Background processing complete");
+        })();
+      }
+
+    } catch (error) {
+      console.error("Import failed:", error);
+      alert("Failed to import book.");
+      setIsSyncing(false);
     }
   };
 
   const AddTextView = () => {
     const [isProcessing, setIsProcessing] = useState(false);
+    const [processingStep, setProcessingStep] = useState(''); // 'extracting', 'chunking', 'adapting', 'saving'
+    const [progress, setProgress] = useState(0);
+    const [importType, setImportType] = useState('text'); // 'text' or 'book'
+
+    // Form State
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [level, setLevel] = useState('A2');
+
+    // Book Specific State
+    const [bookChunks, setBookChunks] = useState([]);
+    const [shouldAdapt, setShouldAdapt] = useState(false);
+    const [ollamaModels, setOllamaModels] = useState([]);
+    const [selectedModel, setSelectedModel] = useState('');
+
+    useEffect(() => {
+      if (importType === 'book' && shouldAdapt) {
+        fetchOllamaModels().then(models => {
+          setOllamaModels(models);
+          if (models.length > 0 && !selectedModel) setSelectedModel(models[0].name);
+        });
+      }
+    }, [importType, shouldAdapt]);
 
     const handleFileUpload = async (e) => {
       const file = e.target.files[0];
       if (!file) return;
 
       setIsProcessing(true);
+      setProcessingStep('extracting');
       try {
+        let extractedText = '';
         if (file.type === 'application/pdf') {
-          await processPDF(file);
+          extractedText = await extractTextFromPDF(file);
+          setTitle(file.name.replace('.pdf', ''));
         } else if (file.type === 'application/epub+zip') {
-          await processEPUB(file);
+          // Reuse existing EPUB logic or move to processor (keeping simple for now)
+          await processEPUB(file); // This sets content/title directly
+          return;
         } else {
           alert('Please upload a PDF or EPUB file.');
+          setIsProcessing(false);
+          return;
         }
+
+        if (importType === 'text') {
+          setContent(extractedText);
+        } else {
+          // Book Mode: Chunk immediately
+          setProcessingStep('chunking');
+          const chunks = chunkText(extractedText);
+          setBookChunks(chunks);
+          console.log(`Chunked into ${chunks.length} parts`);
+        }
+
       } catch (error) {
         console.error('Error processing file:', error);
         alert('Failed to process file. Please try again.');
       } finally {
         setIsProcessing(false);
+        setProcessingStep('');
       }
     };
 
-    const processPDF = async (file) => {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n\n';
-      }
-
-      setTitle(file.name.replace('.pdf', ''));
-      setContent(fullText.trim());
-    };
-
+    // Keep EPUB logic for now as fallback/legacy support within this component
     const processEPUB = async (file) => {
       const book = ePub(file);
       await book.ready;
-
-      // Try to get metadata for title
       const metadata = await book.loaded.metadata;
-      if (metadata && metadata.title) {
-        setTitle(metadata.title);
-      } else {
-        setTitle(file.name.replace('.epub', ''));
-      }
+      setTitle(metadata?.title || file.name.replace('.epub', ''));
 
-      // Extract text from all chapters
       let fullText = '';
-      // Simplified extraction: iterate over spine items
-      // Note: This might be slow for large books and is a basic implementation
       const spine = book.spine;
       for (const item of spine.items) {
         try {
-          // Load the chapter
           const chapter = await book.load(item.href);
-          // If it's a document, get text content
           if (chapter instanceof Document) {
             fullText += chapter.body.textContent + '\n\n';
           } else if (typeof chapter === 'string') {
-            // Sometimes it returns HTML string
             const parser = new DOMParser();
             const doc = parser.parseFromString(chapter, 'text/html');
             fullText += doc.body.textContent + '\n\n';
           }
-        } catch (e) {
-          console.warn("Could not load chapter", item.href, e);
-        }
+        } catch (e) { console.warn("Chapter load error", e); }
       }
-
-      // Fallback if spine iteration fails or yields nothing (common in some epubs)
-      if (!fullText.trim()) {
-        // Try getting locations and text from there? 
-        // Or just alert user that auto-extraction failed for this specific epub format
-        console.warn("Complex EPUB extraction not fully implemented for all formats.");
-      }
-
       setContent(fullText.trim());
+      setIsProcessing(false);
+    };
+
+    // Adaptation State
+    // const [abortController, setAbortController] = useState(null); // Moved to App
+    // const [processLogs, setProcessLogs] = useState([]); // Moved to App
+    // const [showLogs, setShowLogs] = useState(false); // Moved to App
+
+    const handleSaveBook = async () => {
+      if (!currentUser) return;
+      setIsProcessing(true);
+      setProcessingStep('adapting'); // Show adapting status while Ch 1 is processed
+
+      try {
+        // Call the background import function defined in App
+        await startBackgroundImport(title, level, bookChunks, shouldAdapt, selectedModel);
+
+        // No need to setView here, startBackgroundImport does it
+      } catch (error) {
+        console.error("Error saving book:", error);
+        alert("Failed to save book.");
+        setIsProcessing(false);
+        setProcessingStep('');
+      }
+    };
+
+    const handleStopProcessing = () => {
+      // if (abortController) { abortController.abort(); } // Managed by App now
     };
 
     const handleSubmit = async (e) => {
       e.preventDefault();
-      // Use the existing addNewText logic but with local state
-      // We need to call the original addNewText or replicate it.
-      // Since addNewText takes an event, let's just replicate the logic here for clarity
-      // or wrap it. The original addNewText uses formData from e.target.
-
-      // Let's just create a synthetic event or modify addNewText to accept data.
-      // Easier: Replicate logic here since we have state.
-
-      try {
-        if (!currentUser) throw new Error("No authenticated user!");
-
-        const newDocRef = doc(collection(db, 'users', currentUser.uid, 'texts'));
-        await setDoc(newDocRef, {
-          title: title,
-          level: level,
-          content: content,
-          questions: [],
-          createdAt: serverTimestamp()
-        });
-
-        console.log("Text added with ID:", newDocRef.id);
-        setView('library');
-      } catch (error) {
-        console.error("Error adding text:", error);
-        alert(`Failed to save text: ${error.message}`);
+      if (importType === 'book') {
+        handleSaveBook();
+        return;
       }
+
+      // Text Mode Save
+      await handleSaveText({ title, content, level });
+      setView('library');
     };
 
     return (
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm">
+      <div className="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-sm">
         <h2 className="text-2xl font-bold mb-6 text-slate-800 flex items-center gap-2">
-          <Plus className="text-indigo-600" /> Add New Text
+          <Plus className="text-indigo-600" /> Import Content
         </h2>
+
+        {/* Import Type Selector */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => setImportType('text')}
+            className={`flex-1 py-3 rounded-lg border-2 font-medium transition ${importType === 'text' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-indigo-200'}`}
+          >
+            <FileText className="inline-block mr-2" size={18} /> Single Text
+          </button>
+          <button
+            onClick={() => setImportType('book')}
+            className={`flex-1 py-3 rounded-lg border-2 font-medium transition ${importType === 'book' ? 'border-indigo-600 bg-indigo-50 text-indigo-700' : 'border-slate-200 hover:border-indigo-200'}`}
+          >
+            <Book className="inline-block mr-2" size={18} /> Full Book (PDF)
+          </button>
+        </div>
 
         {/* File Upload Section */}
         <div className="mb-8 p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 text-center hover:border-indigo-300 transition-colors">
@@ -399,64 +566,162 @@ function AuthenticatedApp() {
           />
           <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
             {isProcessing ? (
-              <Loader2 className="animate-spin text-indigo-600" size={32} />
+              <div className="flex flex-col items-center w-full">
+                <Loader2 className="animate-spin text-indigo-600 mb-2" size={32} />
+                <p className="text-slate-600 font-medium">
+                  {processingStep === 'extracting' && 'Extracting text...'}
+                  {processingStep === 'chunking' && 'Analyzing chapters...'}
+                  {processingStep === 'adapting' && `Adapting content with AI (${progress}%)...`}
+                  {processingStep === 'saving' && 'Saving to library...'}
+                </p>
+
+                {processingStep === 'adapting' && (
+                  <div className="w-full mt-4 flex flex-col items-center">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleStopProcessing(); }}
+                      className="px-4 py-1 text-sm text-red-600 border border-red-200 rounded-full hover:bg-red-50 mb-4"
+                    >
+                      Stop Adaptation & Save
+                    </button>
+
+                    {/* Logs Section */}
+                    <div className="w-full max-w-lg bg-slate-900 rounded-lg overflow-hidden text-left shadow-lg">
+                      <div
+                        className="bg-slate-800 px-4 py-2 flex justify-between items-center cursor-pointer"
+                        onClick={(e) => { e.stopPropagation(); setShowLogs(!showLogs); }}
+                      >
+                        <span className="text-xs font-mono text-slate-300">LLM Inner Monologue</span>
+                        <span className="text-xs text-slate-400">{showLogs ? 'Hide' : 'Show'}</span>
+                      </div>
+                      {showLogs && (
+                        <div className="p-4 h-48 overflow-y-auto font-mono text-xs text-green-400 space-y-3">
+                          {processLogs.length === 0 && <span className="text-slate-500">Waiting for logs...</span>}
+                          {processLogs.map((log, idx) => (
+                            <div key={idx} className={`border-b border-slate-800 pb-2 last:border-0 ${log.isError ? 'text-red-400' : ''}`}>
+                              <div className="flex justify-between text-slate-500 mb-1">
+                                <span>[{log.timestamp}] {log.title}</span>
+                              </div>
+                              <div>{log.reasoning}</div>
+                            </div>
+                          ))}
+                          {/* Auto-scroll anchor could go here */}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
-              <Upload className="text-indigo-400" size={32} />
+              <>
+                <Upload className="text-indigo-400" size={32} />
+                <span className="font-medium text-slate-700">
+                  Click to upload PDF or EPUB
+                </span>
+                <span className="text-xs text-slate-400">
+                  {importType === 'book' ? "We'll split it into chapters for you." : "We'll extract the text."}
+                </span>
+              </>
             )}
-            <span className="font-medium text-slate-700">
-              {isProcessing ? "Processing file..." : "Click to upload PDF or EPUB"}
-            </span>
-            <span className="text-xs text-slate-400">
-              We'll automatically extract the title and content.
-            </span>
           </label>
         </div>
 
-        <div className="relative flex py-2 items-center mb-6">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">Or enter manually</span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+              <input
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+                placeholder="e.g., Harry Potter"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Target Level</label>
+              <select
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="A1">A1 (Beginner)</option>
+                <option value="A2">A2 (Elementary)</option>
+                <option value="B1">B1 (Intermediate)</option>
+                <option value="B2">B2 (Upper Intermediate)</option>
+                <option value="C1">C1 (Advanced)</option>
+              </select>
+            </div>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
-            <input
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
-              placeholder="e.g., My Favorite Hobby"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
-            <select
-              value={level}
-              onChange={(e) => setLevel(e.target.value)}
-              className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
-            >
-              <option value="A1">A1 (Beginner)</option>
-              <option value="A2">A2 (Elementary)</option>
-              <option value="B1">B1 (Intermediate)</option>
-              <option value="B2">B2 (Upper Intermediate)</option>
-              <option value="C1">C1 (Advanced)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Content</label>
-            <textarea
-              required
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows="10"
-              className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
-              placeholder="Paste German text here..."
-            ></textarea>
-          </div>
+          {importType === 'book' && (
+            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+              <div className="flex items-center justify-between mb-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={shouldAdapt}
+                    onChange={(e) => setShouldAdapt(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  />
+                  <span className="font-medium text-slate-700">Adapt Difficulty with AI</span>
+                </label>
+                {shouldAdapt && (
+                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                    Warning: Takes a long time!
+                  </span>
+                )}
+              </div>
+
+              {shouldAdapt && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ollama Model</label>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none"
+                  >
+                    {ollamaModels.map(m => (
+                      <option key={m.name} value={m.name}>{m.name}</option>
+                    ))}
+                  </select>
+                  {ollamaModels.length === 0 && <p className="text-xs text-red-500 mt-1">Ollama not detected.</p>}
+                </div>
+              )}
+
+              {bookChunks.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <p className="text-sm text-slate-600">
+                    <CheckCircle size={16} className="inline text-green-500 mr-1" />
+                    Ready to import <strong>{bookChunks.length} chapters</strong>.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {importType === 'text' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Content</label>
+              <textarea
+                required
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows="10"
+                className="w-full p-2 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500 outline-none font-mono text-sm"
+                placeholder="Paste German text here..."
+              ></textarea>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <button type="button" onClick={() => setView('library')} className="px-4 py-2 text-slate-600 hover:text-slate-800">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save Text</button>
+            <button
+              type="submit"
+              disabled={isProcessing || (importType === 'book' && bookChunks.length === 0)}
+              className="px-6 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isProcessing ? 'Processing...' : importType === 'book' ? 'Import Book' : 'Save Text'}
+            </button>
           </div>
         </form>
       </div>
@@ -657,9 +922,7 @@ function AuthenticatedApp() {
                   className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 >
                   {ollamaModels.length === 0 && <option value="">Loading models...</option>}
-                  {ollamaModels.map(m => (
-                    <option key={m.name} value={m.name}>{m.name}</option>
-                  ))}
+                  {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
                 </select>
                 {ollamaModels.length === 0 && (
                   <p className="text-xs text-red-500 mt-1">Make sure Ollama is running!</p>
@@ -750,8 +1013,21 @@ function AuthenticatedApp() {
     const [simplifiedContent, setSimplifiedContent] = useState(null);
     const [isSimplifying, setIsSimplifying] = useState(false);
     const [showingSimplified, setShowingSimplified] = useState(false);
+    const [activeTooltip, setActiveTooltip] = useState(null); // For mobile click-to-show
 
     const tokens = tokenize(showingSimplified ? simplifiedContent : activeText.content);
+
+    // Auto-hide tooltip on mobile
+    useEffect(() => {
+      if (activeTooltip) {
+        const timer = setTimeout(() => {
+          setActiveTooltip(null);
+        }, 4500);
+        return () => clearTimeout(timer);
+      }
+    }, [activeTooltip]);
+
+
 
     useEffect(() => {
       if (showQuiz || !selectedOllamaModel) {
@@ -992,7 +1268,60 @@ function AuthenticatedApp() {
               </div >
             ) : (
               <div>
-                <h1 className="text-3xl font-bold mb-6 text-slate-900">{activeText.title}</h1>
+                <h1 className="text-3xl font-bold mb-6 text-slate-900">
+                  {tokenize(activeText.title).map((token, index) => {
+                    const isWord = /\w/.test(token);
+                    if (!isWord) return <span key={index}>{token}</span>;
+                    const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+                    const isSaved = savedVocab.hasOwnProperty(cleanToken);
+
+                    return (
+                      <span
+                        key={index}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const uniqueId = `title-${index}`;
+                          const hasHover = window.matchMedia('(hover: hover)').matches;
+
+                          if (isSaved && savedVocab[cleanToken]) {
+                            if (hasHover) {
+                              await toggleWord(token);
+                              setActiveTooltip(null);
+                            } else {
+                              if (activeTooltip === uniqueId) {
+                                await toggleWord(token);
+                                setActiveTooltip(null);
+                              } else {
+                                setActiveTooltip(uniqueId);
+                              }
+                            }
+                            return;
+                          }
+
+                          const translation = await toggleWord(token);
+                          if (translation) {
+                            setActiveTooltip(uniqueId);
+                          }
+                        }}
+                        className={`group relative cursor-pointer transition-colors duration-200 rounded px-0.5
+                                  ${isSaved ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400' : 'hover:bg-indigo-100 active:bg-indigo-200'}`}
+                      >
+                        {token}
+
+                        {/* Tooltip for Title */}
+                        {isSaved && savedVocab[cleanToken] && (
+                          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-[200px] ${activeTooltip === `title-${index}` ? 'block' : 'hidden group-hover:block'
+                            }`}>
+                            <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
+                              {savedVocab[cleanToken].definition}
+                            </div>
+                            <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+                          </div>
+                        )}
+                      </span>
+                    );
+                  })}
+                </h1>
                 <div className="text-xl leading-loose text-slate-800 font-serif">
                   {sentences.map((sentence, sIndex) => {
                     const isCurrentSentence = sIndex === currentSentenceIndex;
@@ -1023,21 +1352,64 @@ function AuthenticatedApp() {
                           const isSaved = savedVocab.hasOwnProperty(cleanToken);
                           const isTranslating = translatingWord === cleanToken;
                           const isWord = /\w/.test(token);
+                          const uniqueId = `${sIndex}-${tIndex}`;
 
                           if (!isWord) return <span key={tIndex}>{token}</span>;
 
                           return (
                             <span
                               key={tIndex}
-                              onClick={() => toggleWord(cleanToken)}
-                              className={`group/word relative cursor-pointer transition-colors duration-200 rounded px-0.5 mx-0.5 select-none inline-flex items-center gap-1
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const hasHover = window.matchMedia('(hover: hover)').matches;
+                                console.log("[Word Click] Clicked token:", token, "ID:", uniqueId, "Hover:", hasHover);
+
+                                // If already saved
+                                if (isSaved && savedVocab[cleanToken]) {
+                                  if (hasHover) {
+                                    // Desktop: Click always removes (un-highlights)
+                                    // Tooltip is handled by hover
+                                    await toggleWord(token);
+                                    setActiveTooltip(null);
+                                  } else {
+                                    // Mobile: Click shows tooltip, or removes if already shown
+                                    if (activeTooltip === uniqueId) {
+                                      await toggleWord(token);
+                                      setActiveTooltip(null);
+                                    } else {
+                                      setActiveTooltip(uniqueId);
+                                    }
+                                  }
+                                  return;
+                                }
+
+                                // If not saved, translate and save
+                                const translation = await toggleWord(token);
+
+                                // Show tooltip after saving (for both mobile and desktop feedback)
+                                if (translation) {
+                                  setActiveTooltip(uniqueId);
+                                }
+                              }}
+                              className={`group/word relative cursor-pointer transition-colors duration-200 rounded px-0.5
                                         ${isSaved
                                   ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
                                   : 'hover:bg-indigo-100 active:bg-indigo-200'}
                                         ${isTranslating ? 'opacity-70 cursor-wait' : ''}`}
                             >
                               {token}
-                              {isSaved && <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>}
+                              {isTranslating && <span className="inline-block w-1.5 h-1.5 ml-0.5 rounded-full bg-indigo-500 animate-pulse"></span>}
+
+                              {/* Hover Tooltip (desktop) + Click Tooltip (mobile) */}
+                              {isSaved && savedVocab[cleanToken] && (
+                                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-[200px] ${activeTooltip === uniqueId ? 'block' : 'hidden group-hover/word:block'
+                                  }`}>
+                                  <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
+                                    {savedVocab[cleanToken].definition}
+                                  </div>
+                                  <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+                                </div>
+                              )}
                             </span>
                           );
                         })}
@@ -1064,67 +1436,34 @@ function AuthenticatedApp() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans">
       {/* Navigation Sidebar (Mobile: Bottom bar, Desktop: Sidebar) */}
-      <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-3 z-50 md:top-0 md:left-0 md:w-20 md:h-screen md:flex-col md:border-r md:border-t-0 flex justify-around md:justify-start md:pt-8 md:gap-8 shadow-lg md:shadow-none">
+      <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-2 z-50 md:top-0 md:left-0 md:w-20 md:h-screen md:flex-col md:border-r md:border-t-0 md:p-3 flex justify-around md:justify-start md:pt-8 md:gap-8 shadow-lg md:shadow-none">
         <div className="hidden md:flex justify-center mb-4">
           <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">L</div>
         </div>
+
+        {/* Core Items - Always Visible */}
         <button
           onClick={() => setView('library')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'library' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex flex-col items-center gap-1 text-[10px] md:text-xs font-medium transition p-1 rounded-lg ${view === 'library' ? 'text-indigo-600 bg-indigo-50 md:bg-transparent' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <BookOpen className="mx-auto" size={24} /> Library
         </button>
 
         <button
           onClick={() => setView('books')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'books' || view === 'book_detail' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex flex-col items-center gap-1 text-[10px] md:text-xs font-medium transition p-1 rounded-lg ${view === 'books' || view === 'book_detail' ? 'text-indigo-600 bg-indigo-50 md:bg-transparent' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <Book className="mx-auto" size={24} /> Books
         </button>
 
         <button
-          onClick={() => setView('generator')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'generator' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Sparkles className="mx-auto" size={24} /> Generator
-        </button>
-
-        <button
-          onClick={() => setView('chat')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'chat' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <MessageCircle className="mx-auto" size={24} /> Chat
-        </button>
-
-        <button
-          onClick={() => setView('speaking')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'speaking' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Mic className="mx-auto" size={24} /> Speaking
-        </button>
-
-        <button
-          onClick={() => setView('writing')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'writing' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <PenTool className="mx-auto" size={24} /> Writing
-        </button>
-
-        <button
-          onClick={() => setView('vocab')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'vocab' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-        >
-          <Highlighter className="mx-auto" size={24} /> Vocab
-        </button>
-
-        <button
           onClick={() => setView('flashcards')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition relative ${view === 'flashcards' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex flex-col items-center gap-1 text-[10px] md:text-xs font-medium transition relative p-1 rounded-lg ${view === 'flashcards' ? 'text-indigo-600 bg-indigo-50 md:bg-transparent' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <Brain className="mx-auto" size={24} />
           Cards
           {dueCount > 0 && (
-            <span className="absolute top-0 right-2 md:right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+            <span className="absolute top-0 right-1 md:right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
               {dueCount}
             </span>
           )}
@@ -1132,10 +1471,97 @@ function AuthenticatedApp() {
 
         <button
           onClick={() => setView('progress')}
-          className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'progress' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          className={`flex flex-col items-center gap-1 text-[10px] md:text-xs font-medium transition p-1 rounded-lg ${view === 'progress' ? 'text-indigo-600 bg-indigo-50 md:bg-transparent' : 'text-slate-400 hover:text-slate-600'}`}
         >
           <TrendingUp className="mx-auto" size={24} /> Progress
         </button>
+
+        {/* Desktop Only Items (Visible on Desktop, Hidden on Mobile) */}
+        <div className="hidden md:contents">
+          <button
+            onClick={() => setView('generator')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'generator' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Sparkles className="mx-auto" size={24} /> Generator
+          </button>
+
+          <button
+            onClick={() => setView('chat')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'chat' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <MessageCircle className="mx-auto" size={24} /> Chat
+          </button>
+
+          <button
+            onClick={() => setView('speaking')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'speaking' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Mic className="mx-auto" size={24} /> Speaking
+          </button>
+
+          <button
+            onClick={() => setView('writing')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'writing' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <PenTool className="mx-auto" size={24} /> Writing
+          </button>
+
+          <button
+            onClick={() => setView('vocab')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'vocab' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Highlighter className="mx-auto" size={24} /> Vocab
+          </button>
+        </div>
+
+        {/* Mobile "More" Menu */}
+        <div className="md:hidden relative group">
+          <button
+            className={`flex flex-col items-center gap-1 text-[10px] font-medium transition p-1 rounded-lg ${['generator', 'chat', 'speaking', 'writing', 'vocab'].includes(view) ? 'text-indigo-600 bg-indigo-50' : 'text-slate-400 hover:text-slate-600'}`}
+            onClick={() => document.getElementById('mobile-menu').classList.toggle('hidden')}
+          >
+            <MoreVertical className="mx-auto" size={24} /> More
+          </button>
+
+          {/* Popup Menu */}
+          <div id="mobile-menu" className="hidden absolute bottom-full right-0 mb-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
+            <button
+              onClick={() => { setView('generator'); document.getElementById('mobile-menu').classList.add('hidden'); }}
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700"
+            >
+              <Sparkles size={18} className="text-indigo-500" /> Generator
+            </button>
+            <button
+              onClick={() => { setView('chat'); document.getElementById('mobile-menu').classList.add('hidden'); }}
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700"
+            >
+              <MessageCircle size={18} className="text-indigo-500" /> Chat
+            </button>
+            <button
+              onClick={() => { setView('speaking'); document.getElementById('mobile-menu').classList.add('hidden'); }}
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700"
+            >
+              <Mic size={18} className="text-indigo-500" /> Speaking
+            </button>
+            <button
+              onClick={() => { setView('writing'); document.getElementById('mobile-menu').classList.add('hidden'); }}
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700"
+            >
+              <PenTool size={18} className="text-indigo-500" /> Writing
+            </button>
+            <button
+              onClick={() => { setView('vocab'); document.getElementById('mobile-menu').classList.add('hidden'); }}
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700 border-b border-slate-100"
+            >
+              <Highlighter size={18} className="text-indigo-500" /> Vocab
+            </button>
+            <div className="p-2 bg-slate-50 text-center">
+              <button onClick={logout} className="text-xs text-red-500 font-medium flex items-center justify-center gap-1 w-full py-1">
+                <LogOut size={14} /> Log Out
+              </button>
+            </div>
+          </div>
+        </div>
 
         <div className="hidden md:block mt-auto mb-8 text-center space-y-4">
           <div className="flex justify-center" title={isSyncing ? "Syncing to cloud..." : "Saved to cloud"}>
@@ -1175,6 +1601,7 @@ function AuthenticatedApp() {
                 }
                 setView('generator');
               }}
+              onSaveText={handleSaveText}
             />
           )}
           {view === 'reader' && <ReaderView />}
@@ -1192,7 +1619,7 @@ function AuthenticatedApp() {
           {view === 'chat' && <ChatView />}
           {view === 'progress' && <ProgressView />}
           {view === 'flashcards' && <FlashcardView />}
-          {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} />}
+          {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} onImportBook={startBackgroundImport} />}
           {view === 'book_detail' && (
             <BookDetailView
               book={activeBook}

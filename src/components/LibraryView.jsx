@@ -12,8 +12,10 @@ import {
     Book,
     BarChart2,
     AlertCircle,
-    Sparkles
+    Sparkles,
+    Globe
 } from 'lucide-react';
+import NewsModal from './library/NewsModal';
 
 export default function LibraryView({
     texts,
@@ -23,11 +25,13 @@ export default function LibraryView({
     onToggleRead,
     onSeed,
     onAdd,
-    onGenerate
+    onGenerate,
+    onSaveText
 }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLevels, setSelectedLevels] = useState([]);
     const [selectedStatuses, setSelectedStatuses] = useState([]);
+    const [showNewsModal, setShowNewsModal] = useState(false);
 
     // --- HELPERS ---
     const getWordCount = (text) => text.split(/\s+/).length;
@@ -211,6 +215,12 @@ export default function LibraryView({
                         <Book size={18} /> Seed Samples
                     </button>
                     <button
+                        onClick={() => setShowNewsModal(true)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white text-indigo-600 border border-indigo-200 px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition font-medium shadow-sm"
+                    >
+                        <Globe size={18} /> Daily News
+                    </button>
+                    <button
                         onClick={onAdd}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition font-medium shadow-sm hover:shadow-md"
                     >
@@ -301,15 +311,15 @@ export default function LibraryView({
                             <div
                                 key={text.id}
                                 onClick={() => onSelect(text.id)}
-                                className={`group bg-white rounded-2xl p-6 shadow-sm border-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${difficultyColor}`}
+                                className={`group bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm border-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${difficultyColor}`}
                             >
-                                {/* Decorative Gradient Blob */}
-                                <div className="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-white to-transparent rounded-full blur-2xl opacity-50"></div>
+                                {/* Decorative Gradient Blob - Hidden on mobile */}
+                                <div className="hidden md:block absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-white to-transparent rounded-full blur-2xl opacity-50"></div>
 
                                 <div className="relative z-10">
-                                    <div className="flex justify-between items-start mb-4">
+                                    <div className="flex justify-between items-start mb-3 md:mb-4">
                                         <div className="flex gap-2 items-center">
-                                            <span className="px-2.5 py-1 rounded-md text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                            <span className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-md text-[10px] md:text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
                                                 {text.level}
                                             </span>
                                             {getDifficultyBadge(stats.unknownPercent, text.isRead)}
@@ -321,13 +331,13 @@ export default function LibraryView({
                                                     e.stopPropagation();
                                                     onToggleRead(text.id, !text.isRead);
                                                 }}
-                                                className={`p-2 rounded-full transition ${text.isRead
+                                                className={`p-1.5 md:p-2 rounded-full transition ${text.isRead
                                                     ? 'text-green-500 bg-green-50 hover:bg-green-100'
                                                     : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'
                                                     }`}
                                                 title={text.isRead ? "Mark as Unread" : "Mark as Read"}
                                             >
-                                                {text.isRead ? <CheckCircle size={18} /> : <Circle size={18} />}
+                                                {text.isRead ? <CheckCircle size={16} className="md:w-[18px] md:h-[18px]" /> : <Circle size={16} className="md:w-[18px] md:h-[18px]" />}
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -336,38 +346,38 @@ export default function LibraryView({
                                                         onDelete(text.id);
                                                     }
                                                 }}
-                                                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"
+                                                className="p-1.5 md:p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"
                                                 title="Delete Text"
                                             >
-                                                <Trash2 size={18} />
+                                                <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
                                             </button>
                                         </div>
                                     </div>
 
-                                    <h3 className="font-bold text-xl text-slate-800 mb-3 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                                    <h3 className="font-bold text-lg md:text-xl text-slate-800 mb-2 md:mb-3 line-clamp-2 group-hover:text-indigo-600 transition-colors">
                                         {text.title}
                                     </h3>
 
-                                    <p className="text-slate-500 text-sm line-clamp-3 mb-6 leading-relaxed">
+                                    <p className="text-slate-500 text-xs md:text-sm line-clamp-2 md:line-clamp-3 mb-4 md:mb-6 leading-relaxed">
                                         {text.content}
                                     </p>
 
-                                    <div className="flex items-center justify-between text-xs font-medium text-slate-400 border-t border-slate-100 pt-4">
+                                    <div className="flex items-center justify-between text-[10px] md:text-xs font-medium text-slate-400 border-t border-slate-100 pt-3 md:pt-4">
                                         <div className="flex gap-3">
-                                            <div className="flex items-center gap-1.5" title="Word Count">
-                                                <BookOpen size={14} />
+                                            <div className="flex items-center gap-1" title="Word Count">
+                                                <BookOpen size={12} className="md:w-[14px] md:h-[14px]" />
                                                 {stats.totalWords}
                                             </div>
-                                            <div className="flex items-center gap-1.5" title="Reading Time">
-                                                <Clock size={14} />
+                                            <div className="flex items-center gap-1" title="Reading Time">
+                                                <Clock size={12} className="md:w-[14px] md:h-[14px]" />
                                                 {getReadingTime(text.content)}m
                                             </div>
                                         </div>
 
                                         {/* Stats Display */}
                                         {text.isRead && (
-                                            <div className="flex items-center gap-1.5 text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full" title={`${stats.unknownCount} unknown words`}>
-                                                <BarChart2 size={12} />
+                                            <div className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-1.5 py-0.5 md:px-2 md:py-1 rounded-full" title={`${stats.unknownCount} unknown words`}>
+                                                <BarChart2 size={10} className="md:w-[12px] md:h-[12px]" />
                                                 {stats.unknownPercent}% New
                                             </div>
                                         )}
@@ -377,6 +387,13 @@ export default function LibraryView({
                         );
                     })}
                 </div>
+            )}
+
+            {showNewsModal && (
+                <NewsModal
+                    onClose={() => setShowNewsModal(false)}
+                    onSaveText={onSaveText}
+                />
             )}
         </div>
     );

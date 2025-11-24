@@ -91,7 +91,7 @@ export default function Flashcard({ word, onGrade }) {
             </div>
 
             <motion.div
-                style={{ x, y, rotate, opacity }}
+                style={{ x, y, rotate, opacity, touchAction: 'none' }}
                 drag
                 dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
                 onDragEnd={handleDragEnd}
