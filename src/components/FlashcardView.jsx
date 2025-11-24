@@ -250,21 +250,21 @@ export default function FlashcardView() {
     };
 
     if (loading) {
-        return <div className="flex justify-center items-center h-64 text-slate-500">Loading flashcards...</div>;
+        return <div className="flex justify-center items-center h-64 text-slate-500 dark:text-slate-400">Loading flashcards...</div>;
     }
 
     if (sessionComplete) {
         return (
             <div className="max-w-md mx-auto text-center py-12">
-                <div className="bg-indigo-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600">
+                <div className="bg-indigo-100 dark:bg-indigo-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600 dark:text-indigo-400">
                     <Brain size={40} />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">Session Complete!</h2>
-                <p className="text-slate-500 mb-8">You reviewed {cardsReviewed} words in "{selectedDeck}".</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">Session Complete!</h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-8">You reviewed {cardsReviewed} words in "{selectedDeck}".</p>
                 <div className="flex gap-4 justify-center">
                     <button
                         onClick={() => setSelectedDeck(null)}
-                        className="text-slate-500 hover:text-slate-700 font-bold px-4 py-2"
+                        className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-bold px-4 py-2"
                     >
                         Back to Decks
                     </button>
@@ -285,14 +285,14 @@ export default function FlashcardView() {
             <div className="max-w-4xl mx-auto p-4">
                 <div className="flex justify-between items-center mb-8">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                            <Library className="text-indigo-500" /> Flashcard Decks
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Library className="text-indigo-500 dark:text-indigo-400" /> Flashcard Decks
                         </h2>
-                        <p className="text-slate-500 text-sm mt-1">Select a deck to start reviewing</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Select a deck to start reviewing</p>
                     </div>
                     <button
                         onClick={() => setShowGenerateModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200"
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 dark:shadow-indigo-900"
                     >
                         <Sparkles size={18} />
                         Generate Deck
@@ -303,23 +303,23 @@ export default function FlashcardView() {
                     {/* All Words Deck */}
                     <div
                         onClick={() => startSession('All')}
-                        className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-xl transition cursor-pointer group relative overflow-hidden"
+                        className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-xl transition cursor-pointer group relative overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
-                            <Layers size={64} className="text-indigo-600" />
+                            <Layers size={64} className="text-indigo-600 dark:text-indigo-400" />
                         </div>
                         <div className="flex items-start justify-between mb-4">
-                            <div className="bg-indigo-100 p-3 rounded-xl text-indigo-600">
+                            <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-xl text-indigo-600 dark:text-indigo-400">
                                 <Layers size={24} />
                             </div>
                             {allVocab.filter(w => isDue(w.srs) && !w.learned).length > 0 && (
-                                <span className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-bold">
+                                <span className="bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-300 px-3 py-1 rounded-full text-xs font-bold">
                                     {allVocab.filter(w => isDue(w.srs) && !w.learned).length} due
                                 </span>
                             )}
                         </div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-1">All Words</h3>
-                        <p className="text-slate-500 text-sm">{allVocab.length} cards total</p>
+                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">All Words</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">{allVocab.length} cards total</p>
                     </div>
 
                     {/* Dynamic Decks */}
@@ -327,27 +327,27 @@ export default function FlashcardView() {
                         <div
                             key={deck.name}
                             onClick={() => startSession(deck.name)}
-                            className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-xl transition cursor-pointer group relative overflow-hidden"
+                            className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-xl transition cursor-pointer group relative overflow-hidden"
                         >
                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition">
-                                <Brain size={64} className="text-indigo-600" />
+                                <Brain size={64} className="text-indigo-600 dark:text-indigo-400" />
                             </div>
                             <div className="flex items-start justify-between mb-4">
-                                <div className="bg-indigo-50 p-3 rounded-xl text-indigo-500">
+                                <div className="bg-indigo-50 dark:bg-indigo-900 p-3 rounded-xl text-indigo-500 dark:text-indigo-400">
                                     <Brain size={24} />
                                 </div>
                                 {deck.due > 0 ? (
-                                    <span className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-bold">
+                                    <span className="bg-rose-100 dark:bg-rose-900 text-rose-600 dark:text-rose-300 px-3 py-1 rounded-full text-xs font-bold">
                                         {deck.due} due
                                     </span>
                                 ) : (
-                                    <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-xs font-bold">
+                                    <span className="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300 px-3 py-1 rounded-full text-xs font-bold">
                                         All done
                                     </span>
                                 )}
                             </div>
-                            <h3 className="text-lg font-bold text-slate-800 mb-1">{deck.name}</h3>
-                            <p className="text-slate-500 text-sm">{deck.total} cards total</p>
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">{deck.name}</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">{deck.total} cards total</p>
                         </div>
                     ))}
                 </div>
@@ -355,15 +355,15 @@ export default function FlashcardView() {
                 {/* Generate Modal (Reused) */}
                 {showGenerateModal && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                    <Sparkles className="text-indigo-500" size={20} />
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                    <Sparkles className="text-indigo-500 dark:text-indigo-400" size={20} />
                                     Generate Flashcards
                                 </h3>
                                 <button
                                     onClick={() => setShowGenerateModal(false)}
-                                    className="text-slate-400 hover:text-slate-600 transition"
+                                    className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
                                 >
                                     <X size={20} />
                                 </button>
@@ -371,13 +371,13 @@ export default function FlashcardView() {
 
                             <div className="p-6 space-y-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-slate-700 mb-1">Topic</label>
+                                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Topic</label>
                                     <input
                                         type="text"
                                         value={generateTopic}
                                         onChange={(e) => setGenerateTopic(e.target.value)}
                                         placeholder="e.g., Medicine, Travel, Fruits"
-                                        className="w-full px-4 py-2 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition"
+                                        className="w-full px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900 outline-none transition"
                                         autoFocus
                                     />
                                 </div>
@@ -451,21 +451,21 @@ export default function FlashcardView() {
     if (dueCards.length === 0) {
         return (
             <div className="max-w-md mx-auto text-center py-12">
-                <div className="bg-green-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
+                <div className="bg-green-100 dark:bg-green-900 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 dark:text-green-400">
                     <CheckCircle size={40} />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-800 mb-2">All Caught Up!</h2>
-                <p className="text-slate-500 mb-8">You have no cards due for review in <strong>{selectedDeck}</strong>.</p>
+                <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">All Caught Up!</h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-8">You have no cards due for review in <strong>{selectedDeck}</strong>.</p>
                 <div className="flex gap-4 justify-center">
                     <button
                         onClick={() => setSelectedDeck(null)}
-                        className="text-slate-500 hover:text-slate-700 font-bold px-4 py-2"
+                        className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 font-bold px-4 py-2"
                     >
                         Back to Decks
                     </button>
                     <button
                         onClick={fetchDueCards}
-                        className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center justify-center gap-2"
+                        className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center justify-center gap-2"
                     >
                         <RefreshCw size={16} /> Check again
                     </button>
@@ -482,12 +482,12 @@ export default function FlashcardView() {
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setSelectedDeck(null)}
-                        className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition"
+                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition"
                     >
                         <X size={20} />
                     </button>
-                    <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                        <Brain className="text-indigo-500" /> {selectedDeck}
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <Brain className="text-indigo-500 dark:text-indigo-400" /> {selectedDeck}
                     </h2>
                 </div>
                 <div className="flex items-center gap-2">

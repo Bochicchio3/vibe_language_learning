@@ -51,8 +51,8 @@ export default function ProgressView() {
         return (
             <div className="flex items-center justify-center h-96">
                 <div className="text-center">
-                    <TrendingUp className="mx-auto mb-4 text-indigo-400 animate-pulse" size={48} />
-                    <p className="text-slate-500">Loading your progress...</p>
+                    <TrendingUp className="mx-auto mb-4 text-indigo-400 dark:text-indigo-500 animate-pulse" size={48} />
+                    <p className="text-slate-500 dark:text-slate-400">Loading your progress...</p>
                 </div>
             </div>
         );
@@ -68,20 +68,20 @@ export default function ProgressView() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {/* Header */}
             <div className="mb-8">
-                <h2 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                    <TrendingUp className="text-indigo-600" />
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                    <TrendingUp className="text-indigo-600 dark:text-indigo-400" />
                     Your Learning Progress
                 </h2>
-                <p className="text-slate-500 mt-1">Track all your language learning activities and build consistent habits</p>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">Track all your language learning activities and build consistent habits</p>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-8 border-b border-slate-200">
+            <div className="flex gap-2 mb-8 border-b border-slate-200 dark:border-slate-700">
                 <button
                     onClick={() => setActiveTab('overview')}
                     className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'overview'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                 >
                     Overview
@@ -89,8 +89,8 @@ export default function ProgressView() {
                 <button
                     onClick={() => setActiveTab('history')}
                     className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'history'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                 >
                     History
@@ -98,8 +98,8 @@ export default function ProgressView() {
                 <button
                     onClick={() => setActiveTab('goals')}
                     className={`px-4 py-2 font-medium transition-colors border-b-2 ${activeTab === 'goals'
-                        ? 'border-indigo-600 text-indigo-600'
-                        : 'border-transparent text-slate-500 hover:text-slate-700'
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                 >
                     Goals

@@ -121,15 +121,15 @@ export default function WritingPractice({ savedVocab, onSave }) {
         <div className="max-w-6xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-100px)]">
             {/* Left Column: Writing Area */}
             <div className="lg:col-span-2 flex flex-col gap-4 h-full">
-                <div className="bg-white p-6 rounded-xl shadow-sm flex-grow flex flex-col">
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm flex-grow flex flex-col">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                            <PenTool className="text-indigo-600" /> Writing Practice
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <PenTool className="text-indigo-600 dark:text-indigo-400" /> Writing Practice
                         </h2>
                         <div className="flex gap-2">
                             <button
                                 onClick={handleRandomTopic}
-                                className="text-sm text-indigo-600 hover:bg-indigo-50 px-3 py-1 rounded-full transition flex items-center gap-1"
+                                className="text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900 px-3 py-1 rounded-full transition flex items-center gap-1"
                             >
                                 <Lightbulb size={16} /> New Topic
                             </button>
@@ -137,9 +137,9 @@ export default function WritingPractice({ savedVocab, onSave }) {
                     </div>
 
                     {topic && (
-                        <div className="bg-indigo-50 text-indigo-800 p-3 rounded-lg mb-4 text-sm font-medium flex justify-between items-center animate-in fade-in">
+                        <div className="bg-indigo-50 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 p-3 rounded-lg mb-4 text-sm font-medium flex justify-between items-center animate-in fade-in">
                             <span>Topic: {topic}</span>
-                            <button onClick={() => setTopic('')} className="hover:text-indigo-900"><RotateCcw size={14} /></button>
+                            <button onClick={() => setTopic('')} className="hover:text-indigo-900 dark:hover:text-indigo-100"><RotateCcw size={14} /></button>
                         </div>
                     )}
 
@@ -147,11 +147,11 @@ export default function WritingPractice({ savedVocab, onSave }) {
                         value={text}
                         onChange={(e) => setText(e.target.value)}
                         placeholder="Start writing in German here..."
-                        className="flex-grow w-full p-4 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none font-sans text-lg leading-relaxed"
+                        className="flex-grow w-full p-4 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none font-sans text-lg leading-relaxed placeholder-slate-400 dark:placeholder-slate-500"
                     />
 
-                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100">
-                        <div className="text-slate-400 text-sm">
+                    <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+                        <div className="text-slate-400 dark:text-slate-500 text-sm">
                             {text.trim().split(/\s+/).filter(w => w.length > 0).length} words
                         </div>
                         <div className="flex gap-3">
@@ -190,30 +190,30 @@ export default function WritingPractice({ savedVocab, onSave }) {
             {/* Right Column: Feedback & Tools */}
             <div className="flex flex-col gap-6 h-full overflow-y-auto custom-scrollbar">
                 {/* Vocabulary Hints */}
-                <div className="bg-white p-6 rounded-xl shadow-sm">
-                    <h3 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                        <BookOpen size={18} className="text-amber-500" /> Vocabulary Challenge
+                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm">
+                    <h3 className="font-bold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                        <BookOpen size={18} className="text-amber-500 dark:text-amber-400" /> Vocabulary Challenge
                     </h3>
-                    <p className="text-xs text-slate-500 mb-3">Try to use these words from your list:</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">Try to use these words from your list:</p>
                     <div className="flex flex-wrap gap-2">
                         {randomVocab.length > 0 ? randomVocab.map(word => (
-                            <span key={word} className="bg-amber-50 text-amber-800 px-2 py-1 rounded text-sm border border-amber-100">
+                            <span key={word} className="bg-amber-50 dark:bg-amber-900 text-amber-800 dark:text-amber-200 px-2 py-1 rounded text-sm border border-amber-100 dark:border-amber-800">
                                 {word}
                             </span>
                         )) : (
-                            <span className="text-slate-400 text-sm italic">No saved words yet.</span>
+                            <span className="text-slate-400 dark:text-slate-500 text-sm italic">No saved words yet.</span>
                         )}
                     </div>
                 </div>
 
                 {/* Feedback Area */}
                 {feedback ? (
-                    <div className="bg-white p-6 rounded-xl shadow-sm flex-grow animate-in slide-in-from-right-4">
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm flex-grow animate-in slide-in-from-right-4">
                         <div className="flex justify-between items-start mb-4">
-                            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                                <CheckCircle className="text-green-500" size={20} /> AI Feedback
+                            <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                                <CheckCircle className="text-green-500 dark:text-green-400" size={20} /> AI Feedback
                             </h3>
-                            <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-xs font-bold">
+                            <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-1 rounded text-xs font-bold">
                                 {feedback.rating || "N/A"}
                             </span>
                         </div>
@@ -266,8 +266,8 @@ export default function WritingPractice({ savedVocab, onSave }) {
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-white p-6 rounded-xl shadow-sm flex-grow flex flex-col justify-center items-center text-center text-slate-400">
-                        <Sparkles size={48} className="mb-4 text-slate-200" />
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm flex-grow flex flex-col justify-center items-center text-center text-slate-400 dark:text-slate-500">
+                        <Sparkles size={48} className="mb-4 text-slate-200 dark:text-slate-700" />
                         <p>Write something and click "Analyze" to get AI feedback on your grammar and style.</p>
                     </div>
                 )}

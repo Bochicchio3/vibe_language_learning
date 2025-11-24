@@ -394,8 +394,8 @@ const SpeakingPractice = () => {
             {/* Header */}
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Speaking Practice</h1>
-                    <div className="flex items-center gap-2 text-slate-500">
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Speaking Practice</h1>
+                    <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
                         <p>Improve your pronunciation and conversation skills</p>
                     </div>
                 </div>
@@ -411,16 +411,16 @@ const SpeakingPractice = () => {
             </div>
 
             {/* Mode Switcher */}
-            <div className="flex p-1 bg-slate-100 rounded-xl w-fit">
+            <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
                 <button
                     onClick={() => setMode('sentences')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'sentences' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'sentences' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
                     Sentences
                 </button>
                 <button
                     onClick={() => setMode('roleplay')}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'roleplay' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${mode === 'roleplay' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
                     Role Play
                 </button>
@@ -430,25 +430,25 @@ const SpeakingPractice = () => {
             {mode === 'sentences' ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Left: Practice Sentences */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        <div className="p-4 bg-slate-50 border-b border-slate-200 font-medium text-slate-700">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 font-medium text-slate-700 dark:text-slate-300">
                             Practice Sentences
                         </div>
-                        <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+                        <div className="divide-y divide-slate-100 dark:divide-slate-700 max-h-[400px] overflow-y-auto">
                             {PRACTICE_SENTENCES.map((item, idx) => (
                                 <div
                                     key={idx}
                                     onClick={() => isModelLoaded && setActiveSentence(item.text)}
-                                    className={`p-4 hover:bg-indigo-50 cursor-pointer transition-colors flex justify-between items-center group ${activeSentence === item.text ? 'bg-indigo-50 ring-1 ring-inset ring-indigo-200' : ''
+                                    className={`p-4 hover:bg-indigo-50 dark:hover:bg-indigo-900 cursor-pointer transition-colors flex justify-between items-center group ${activeSentence === item.text ? 'bg-indigo-50 dark:bg-indigo-900 ring-1 ring-inset ring-indigo-200 dark:ring-indigo-700' : ''
                                         }`}
                                 >
                                     <div>
-                                        <p className="text-slate-800 font-medium">{item.text}</p>
-                                        <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded mt-1 inline-block">
+                                        <p className="text-slate-800 dark:text-white font-medium">{item.text}</p>
+                                        <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded mt-1 inline-block">
                                             {item.level}
                                         </span>
                                     </div>
-                                    <button className="text-slate-300 group-hover:text-indigo-600 transition-colors">
+                                    <button className="text-slate-300 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                         <Volume2 size={18} />
                                     </button>
                                 </div>
@@ -530,18 +530,18 @@ const SpeakingPractice = () => {
                         </div>
 
                         {/* Recent Transcripts */}
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 min-h-[200px]">
-                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Recent Attempts</h3>
+                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 min-h-[200px]">
+                            <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Recent Attempts</h3>
                             <div className="space-y-4">
                                 {transcript.length === 0 ? (
-                                    <p className="text-center text-slate-400 text-sm py-8 italic">No recordings yet.</p>
+                                    <p className="text-center text-slate-400 dark:text-slate-500 text-sm py-8 italic">No recordings yet.</p>
                                 ) : (
                                     transcript.slice().reverse().map((t, i) => (
-                                        <div key={i} className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                                        <div key={i} className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3 border border-slate-100 dark:border-slate-700">
                                             {t.target && (
-                                                <p className="text-xs text-slate-500 mb-1">Target: "{t.target}"</p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Target: "{t.target}"</p>
                                             )}
-                                            <p className="text-slate-800 font-medium mb-2">"{t.text}"</p>
+                                            <p className="text-slate-800 dark:text-white font-medium mb-2">"{t.text}"</p>
                                             <audio controls src={t.audioUrl} className="w-full h-8" />
                                         </div>
                                     ))
@@ -555,22 +555,22 @@ const SpeakingPractice = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
                     {/* Left: Settings & Scenarios */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Scenario</h3>
+                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                            <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4">Scenario</h3>
                             <div className="space-y-2">
                                 {SCENARIOS.map(s => (
                                     <button
                                         key={s.id}
                                         onClick={() => { setScenario(s); setChatHistory([]); }}
                                         className={`w-full p-3 rounded-lg text-left transition-all flex items-center gap-3 ${scenario.id === s.id
-                                            ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200'
-                                            : 'hover:bg-slate-50 border border-transparent'
+                                            ? 'bg-indigo-50 dark:bg-indigo-900 border-indigo-200 dark:border-indigo-700 ring-1 ring-indigo-200 dark:ring-indigo-700'
+                                            : 'hover:bg-slate-50 dark:hover:bg-slate-700 border border-transparent'
                                             }`}
                                     >
                                         <span className="text-2xl">{s.icon}</span>
                                         <div>
-                                            <p className={`font-medium ${scenario.id === s.id ? 'text-indigo-900' : 'text-slate-700'}`}>{s.name}</p>
-                                            <p className="text-xs text-slate-500">{s.description}</p>
+                                            <p className={`font-medium ${scenario.id === s.id ? 'text-indigo-900 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>{s.name}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">{s.description}</p>
                                         </div>
                                     </button>
                                 ))}
@@ -596,7 +596,7 @@ const SpeakingPractice = () => {
                     </div>
 
                     {/* Right: Chat Interface */}
-                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                    <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden">
                         {/* Chat History */}
                         <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                             {chatHistory.length === 0 ? (

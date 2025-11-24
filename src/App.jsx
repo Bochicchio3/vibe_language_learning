@@ -31,7 +31,8 @@ import {
   Play,
   MoreVertical,
   Sun,
-  Moon
+  Moon,
+  AlertCircle
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import ePub from 'epubjs';
@@ -73,6 +74,7 @@ import { useTTS } from './hooks/useTTS';
 import JourneyView from './components/JourneyView';
 import { useGamification } from './hooks/useGamification';
 import { StreakCounter, XPBar, LevelBadge } from './components/GamificationComponents';
+import ImprovementsView from './components/ImprovementsView';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---
 const INITIAL_TEXTS = [
@@ -120,7 +122,7 @@ const SAMPLE_TEXTS = [
 
 function AuthenticatedApp() {
   // --- STATE ---
-  const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail'
+  const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail', 'improvements'
   const [activeText, setActiveText] = useState(null); // Changed from ID to object
   const [activeBook, setActiveBook] = useState(null); // New state for active book
   const [activeChapter, setActiveChapter] = useState(null); // New state for active chapter
@@ -1101,7 +1103,7 @@ function AuthenticatedApp() {
 
     return (
       <div
-        className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col relative"
+        className="max-w-3xl mx-auto bg-white dark:bg-slate-900 min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col relative"
         onMouseUp={handleSelection}
       >
         {/* Selection Popup */}
@@ -1121,8 +1123,8 @@ function AuthenticatedApp() {
         )}
 
         {/* Toolbar */}
-        <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-10">
-          <button onClick={() => setView('library')} className="text-slate-500 hover:text-slate-800 flex items-center gap-1">
+        <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex justify-between items-center sticky top-0 z-10">
+          <button onClick={() => setView('library')} className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1">
             <ChevronLeft size={18} /> Library
           </button>
           <div className="flex gap-2 items-center">
@@ -1130,7 +1132,7 @@ function AuthenticatedApp() {
             {simplifiedContent ? (
               <button
                 onClick={() => setShowingSimplified(!showingSimplified)}
-                className={`p-2 rounded-full transition ${showingSimplified ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-200 text-slate-700'}`}
+                className={`p-2 rounded-full transition ${showingSimplified ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-400' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
                 title={showingSimplified ? "Show Original" : "Show Simplified"}
               >
                 <RotateCcw size={20} />
@@ -1139,7 +1141,7 @@ function AuthenticatedApp() {
               <button
                 onClick={handleSimplify}
                 disabled={isSimplifying || ollamaModels.length === 0}
-                className={`p-2 rounded-full transition ${isSimplifying ? 'bg-indigo-50 text-indigo-400' : 'hover:bg-slate-200 text-slate-700'}`}
+                className={`p-2 rounded-full transition ${isSimplifying ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-400' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
                 title="Simplify Text (AI)"
               >
                 {isSimplifying ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
@@ -1166,8 +1168,8 @@ function AuthenticatedApp() {
             <button
               onClick={handleSpeak}
               className={`p-2 rounded-full transition ${isPlaying
-                ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 animate-pulse'
-                : 'hover:bg-slate-200 text-slate-700'
+                ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 animate-pulse'
+                : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
                 }`}
               title={isPlaying ? "Stop Reading" : "Read Aloud"}
               disabled={isModelLoading}
@@ -1176,7 +1178,7 @@ function AuthenticatedApp() {
             </button>
             <button
               onClick={() => setShowQuiz(!showQuiz)}
-              className={`p-2 rounded-full transition ${showQuiz ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-200 text-slate-700'}`}
+              className={`p-2 rounded-full transition ${showQuiz ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-400' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
               title="Comprehension Questions"
             >
               <Brain size={20} />
@@ -1247,7 +1249,7 @@ function AuthenticatedApp() {
               </div >
             ) : (
               <div>
-                <h1 className="text-3xl font-bold mb-6 text-slate-900">
+                <h1 className="text-3xl font-bold mb-6 text-slate-900 dark:text-white">
                   {tokenize(activeText.title).map((token, index) => {
                     const isWord = /\w/.test(token);
                     if (!isWord) return <span key={index}>{token}</span>;
@@ -1301,14 +1303,14 @@ function AuthenticatedApp() {
                     );
                   })}
                 </h1>
-                <div className="text-xl leading-loose text-slate-800 font-serif">
+                <div className="text-xl leading-loose text-slate-800 dark:text-slate-200 font-serif">
                   {sentences.map((sentence, sIndex) => {
                     const isCurrentSentence = sIndex === currentSentenceIndex;
                     const isGenerating = generatingSentences.has(sIndex);
                     const tokens = tokenize(sentence);
 
                     return (
-                      <div key={sIndex} className={`group relative transition-colors duration-300 rounded-lg py-2 px-1 -mx-1 ${isCurrentSentence ? 'bg-yellow-100' : 'hover:bg-slate-50'}`}>
+                      <div key={sIndex} className={`group relative transition-colors duration-300 rounded-lg py-2 px-1 -mx-1 ${isCurrentSentence ? 'bg-yellow-100 dark:bg-yellow-900' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
                         {/* Sentence Play Button - larger hit area */}
                         <button
                           onClick={(e) => {
@@ -1497,6 +1499,13 @@ function AuthenticatedApp() {
           >
             <Highlighter className="mx-auto" size={24} /> Vocab
           </button>
+
+          <button
+            onClick={() => setView('improvements')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'improvements' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <AlertCircle className="mx-auto" size={24} /> Improvements
+          </button>
         </div>
 
         {/* Mobile "More" Menu */}
@@ -1536,9 +1545,15 @@ function AuthenticatedApp() {
             </button>
             <button
               onClick={() => { setView('vocab'); document.getElementById('mobile-menu').classList.add('hidden'); }}
-              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700 border-b border-slate-100"
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700"
             >
               <Highlighter size={18} className="text-indigo-500" /> Vocab
+            </button>
+            <button
+              onClick={() => { setView('improvements'); document.getElementById('mobile-menu').classList.add('hidden'); }}
+              className="flex items-center gap-3 w-full p-3 hover:bg-slate-50 text-left text-sm font-medium text-slate-700 border-b border-slate-100"
+            >
+              <AlertCircle size={18} className="text-indigo-500" /> Improvements
             </button>
             <div className="p-2 bg-slate-50 dark:bg-slate-800 text-center border-t border-slate-100 dark:border-slate-700">
               <button onClick={logout} className="text-xs text-red-500 font-medium flex items-center justify-center gap-1 w-full py-1">
@@ -1602,6 +1617,7 @@ function AuthenticatedApp() {
           {view === 'generator' && <GeneratorView />}
           {view === 'chat' && <ChatView />}
           {view === 'progress' && <ProgressView />}
+          {view === 'improvements' && <ImprovementsView />}
           {view === 'flashcards' && <FlashcardView />}
           {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} onImportBook={startBackgroundImport} />}
           {view === 'book_detail' && (

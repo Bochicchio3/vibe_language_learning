@@ -25,7 +25,7 @@ export default function JourneyView({ completedNodes = [], onNodeClick }) {
 
     return (
         <div className="relative w-full max-w-md mx-auto min-h-[80vh] p-8 pb-24">
-            <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-slate-200 -translate-x-1/2 z-0" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-slate-200 dark:bg-slate-700 -translate-x-1/2 z-0" />
 
             <div className="relative z-10 flex flex-col gap-12 items-center">
                 {JOURNEY_NODES.map((node, index) => {
@@ -53,16 +53,16 @@ export default function JourneyView({ completedNodes = [], onNodeClick }) {
                             </div>
 
                             {/* Label */}
-                            <div className="absolute top-24 w-40 text-center bg-white/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border border-slate-100">
-                                <h3 className="font-bold text-slate-800 text-sm">{node.title}</h3>
-                                <p className="text-xs text-slate-500 line-clamp-1">{node.description}</p>
+                            <div className="absolute top-24 w-40 text-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-2 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                                <h3 className="font-bold text-slate-800 dark:text-white text-sm">{node.title}</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{node.description}</p>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            <div className="mt-12 text-center text-slate-400 text-sm">
+            <div className="mt-12 text-center text-slate-400 dark:text-slate-500 text-sm">
                 More levels coming soon!
             </div>
         </div>

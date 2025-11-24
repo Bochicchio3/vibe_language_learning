@@ -314,17 +314,17 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
             {/* Header & Controls */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                 <div>
-                    <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                        <Book className="text-indigo-600" /> Books Library
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <Book className="text-indigo-600 dark:text-indigo-400" /> Books Library
                     </h2>
-                    <p className="text-slate-500 text-sm">Read and manage your collection</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm">Read and manage your collection</p>
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
                     {/* Admin Toggle (Simulation) */}
                     <button
                         onClick={() => setIsAdmin(!isAdmin)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${isAdmin ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition ${isAdmin ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'}`}
                     >
                         <Shield size={14} /> {isAdmin ? 'Admin ON' : 'Admin OFF'}
                     </button>
@@ -350,48 +350,48 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
             </div>
 
             {/* Tabs */}
-            <div className="flex border-b border-slate-200 mb-6">
+            <div className="flex border-b border-slate-200 dark:border-slate-700 mb-6">
                 <button
                     onClick={() => setActiveTab('private')}
-                    className={`px-6 py-3 font-medium text-sm transition relative ${activeTab === 'private' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-6 py-3 font-medium text-sm transition relative ${activeTab === 'private' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
                     <div className="flex items-center gap-2">
                         <User size={16} /> My Library
                     </div>
                     {activeTab === 'private' && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-t-full"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full"></div>
                     )}
                 </button>
                 <button
                     onClick={() => setActiveTab('public')}
-                    className={`px-6 py-3 font-medium text-sm transition relative ${activeTab === 'public' ? 'text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-6 py-3 font-medium text-sm transition relative ${activeTab === 'public' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
                 >
                     <div className="flex items-center gap-2">
                         <Globe size={16} /> Public Library
                     </div>
                     {activeTab === 'public' && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 rounded-t-full"></div>
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full"></div>
                     )}
                 </button>
             </div>
 
             {/* Search & Filters */}
-            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-8 flex flex-col gap-4">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8 flex flex-col gap-4">
                 {/* Search Bar */}
                 <div className="relative w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={20} />
                     <input
                         type="text"
                         placeholder="Search books..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white transition outline-none"
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-700 border-none rounded-xl text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 focus:bg-white dark:focus:bg-slate-600 transition outline-none"
                     />
                 </div>
 
                 {/* Level Filter */}
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar items-center">
-                    <span className="text-sm font-medium text-slate-400 flex items-center mr-2 shrink-0">
+                    <span className="text-sm font-medium text-slate-400 dark:text-slate-500 flex items-center mr-2 shrink-0">
                         <Filter size={14} className="mr-1" /> Level:
                     </span>
                     {['A1', 'A2', 'B1', 'B2', 'C1'].map(l => (
@@ -399,8 +399,8 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                             key={l}
                             onClick={() => toggleLevel(l)}
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition whitespace-nowrap ${selectedLevels.includes(l)
-                                ? 'bg-slate-800 text-white shadow-md'
-                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-md'
+                                : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600'
                                 }`}
                         >
                             {l}
@@ -409,7 +409,7 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                     {selectedLevels.length > 0 && (
                         <button
                             onClick={() => setSelectedLevels([])}
-                            className="text-xs text-slate-400 hover:text-slate-600 ml-auto"
+                            className="text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 ml-auto"
                         >
                             Clear
                         </button>
@@ -419,16 +419,16 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
 
             {/* Admin Pending Section */}
             {activeTab === 'public' && isAdmin && pendingBooks.length > 0 && (
-                <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-6">
-                    <h3 className="text-amber-800 font-bold flex items-center gap-2 mb-4">
+                <div className="mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6">
+                    <h3 className="text-amber-800 dark:text-amber-400 font-bold flex items-center gap-2 mb-4">
                         <Shield size={18} /> Pending Approvals ({pendingBooks.length})
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {pendingBooks.map(book => (
-                            <div key={book.id} className="bg-white p-4 rounded-lg shadow-sm border border-amber-100 flex justify-between items-center">
+                            <div key={book.id} className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm border border-amber-100 dark:border-amber-800 flex justify-between items-center">
                                 <div>
-                                    <h4 className="font-bold text-slate-800">{book.title}</h4>
-                                    <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{book.level}</span>
+                                    <h4 className="font-bold text-slate-800 dark:text-white">{book.title}</h4>
+                                    <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded">{book.level}</span>
                                 </div>
                                 <div className="flex gap-2">
                                     <button
@@ -454,17 +454,17 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
 
             {/* Books Grid */}
             {filteredBooks.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-100">
-                    <Book size={48} className="mx-auto text-slate-300 mb-4" />
-                    <p className="text-slate-500">No books found.</p>
-                    <p className="text-sm text-slate-400 mt-1">
+                <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
+                    <Book size={48} className="mx-auto text-slate-300 dark:text-slate-600 mb-4" />
+                    <p className="text-slate-500 dark:text-slate-400">No books found.</p>
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
                         Try adjusting your filters or search query.
                     </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredBooks.map(book => (
-                        <div key={book.id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition group flex flex-col h-full">
+                        <div key={book.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-md transition group flex flex-col h-full">
                             <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white p-6 relative shrink-0">
                                 <Book size={48} className="opacity-20 absolute right-4 bottom-4" />
                                 <h3 className="text-xl font-bold text-center z-10 line-clamp-2">{book.title}</h3>
@@ -474,7 +474,7 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                             </div>
 
                             <div className="p-6 flex flex-col flex-1">
-                                <div className="flex justify-between items-center text-sm text-slate-500 mb-4">
+                                <div className="flex justify-between items-center text-sm text-slate-500 dark:text-slate-400 mb-4">
                                     <span>{book.totalChapters || book.chapters?.length || 0} Chapters</span>
                                     {/* Placeholder for progress */}
                                     {activeTab === 'private' && <span>0% Complete</span>}
@@ -488,7 +488,7 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                                                 setActiveBook(book);
                                                 setView('book_detail');
                                             }}
-                                            className="w-full bg-slate-50 hover:bg-indigo-50 text-indigo-600 font-medium py-2 rounded-lg border border-slate-200 hover:border-indigo-200 transition flex items-center justify-center gap-2"
+                                            className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 font-medium py-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-indigo-200 dark:hover:border-indigo-800 transition flex items-center justify-center gap-2"
                                         >
                                             <PlayCircle size={18} /> Start Reading
                                         </button>
@@ -505,7 +505,7 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                                     {activeTab === 'private' && (
                                         <button
                                             onClick={() => handlePushToPublic(book)}
-                                            className="w-full bg-white hover:bg-slate-50 text-slate-500 hover:text-indigo-600 text-sm font-medium py-2 rounded-lg border border-transparent hover:border-slate-200 transition flex items-center justify-center gap-2"
+                                            className="w-full bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium py-2 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition flex items-center justify-center gap-2"
                                         >
                                             <Share2 size={16} /> Share to Public
                                         </button>
@@ -520,10 +520,10 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
             {/* Add Book Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-                        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                            <h3 className="font-bold text-slate-800">Import New Book</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+                            <h3 className="font-bold text-slate-800 dark:text-white">Import New Book</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
                                 <X size={20} />
                             </button>
                         </div>
@@ -624,12 +624,12 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
 
                             {/* Title */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Book Title</label>
+                                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Book Title</label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
                                     placeholder="Enter book title..."
                                 />
                             </div>

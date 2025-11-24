@@ -78,22 +78,22 @@ export default function NewsModal({ onClose, onSaveText }) {
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
                 {/* Header */}
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                            <Globe className="text-indigo-600" /> Daily German News
+                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <Globe className="text-indigo-600 dark:text-indigo-400" /> Daily German News
                         </h2>
-                        <p className="text-slate-500 text-sm">Read current events simplified for you</p>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm">Read current events simplified for you</p>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition text-slate-400 hover:text-slate-600">
+                    <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                         <X size={24} />
                     </button>
                 </div>
 
                 {/* Controls */}
-                <div className="p-4 border-b border-slate-100 flex flex-col md:flex-row gap-4 justify-between items-center bg-white">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row gap-4 justify-between items-center bg-white dark:bg-slate-800">
                     <div className="flex gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar">
                         {categories.map(cat => (
                             <button
@@ -101,7 +101,7 @@ export default function NewsModal({ onClose, onSaveText }) {
                                 onClick={() => handleCategoryChange(cat)}
                                 className={`px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap ${category === cat
                                     ? 'bg-indigo-600 text-white shadow-md'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                                     }`}
                             >
                                 {cat}
@@ -113,14 +113,14 @@ export default function NewsModal({ onClose, onSaveText }) {
                         <select
                             value={selectedModel}
                             onChange={(e) => setSelectedModel(e.target.value)}
-                            className="p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none w-full md:w-48"
+                            className="p-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none w-full md:w-48"
                         >
                             {models.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
                             {models.length === 0 && <option>Loading models...</option>}
                         </select>
                         <button
                             onClick={() => loadNews(category)}
-                            className="p-2 text-slate-400 hover:text-indigo-600 transition"
+                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
                             title="Refresh News"
                         >
                             <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
@@ -129,32 +129,32 @@ export default function NewsModal({ onClose, onSaveText }) {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 bg-slate-50">
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-900">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
                             <Loader2 size={48} className="animate-spin mb-4 text-indigo-400" />
                             <p>Fetching latest news...</p>
                         </div>
                     ) : error ? (
-                        <div className="text-center py-20 text-red-500">
+                        <div className="text-center py-20 text-red-500 dark:text-red-400">
                             <p>{error}</p>
-                            <button onClick={() => loadNews(category)} className="mt-4 text-indigo-600 hover:underline">Try Again</button>
+                            <button onClick={() => loadNews(category)} className="mt-4 text-indigo-600 dark:text-indigo-400 hover:underline">Try Again</button>
                         </div>
                     ) : (
                         <div className="grid gap-4 md:grid-cols-2">
                             {articles.map((article, idx) => (
-                                <div key={idx} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition group">
+                                <div key={idx} className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition group">
                                     <div className="flex justify-between items-start mb-2">
-                                        <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">{article.source}</span>
-                                        <span className="text-[10px] text-slate-400">{new Date(article.pubDate).toLocaleDateString()}</span>
+                                        <span className="text-[10px] font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">{article.source}</span>
+                                        <span className="text-[10px] text-slate-400 dark:text-slate-500">{new Date(article.pubDate).toLocaleDateString()}</span>
                                     </div>
 
-                                    <h3 className="font-bold text-slate-800 mb-2 line-clamp-2 group-hover:text-indigo-700 transition-colors">
+                                    <h3 className="font-bold text-slate-800 dark:text-white mb-2 line-clamp-2 group-hover:text-indigo-700 dark:group-hover:text-indigo-400 transition-colors">
                                         {article.title.replace(/^(heise\+|ZEIT ONLINE \|)\s*\|?\s*/i, '').replace(/WTF:\s*/i, '')}
                                     </h3>
 
                                     <div className="mb-4">
-                                        <p className={`text-sm text-slate-500 ${article.expanded ? '' : 'line-clamp-3'}`}>
+                                        <p className={`text-sm text-slate-500 dark:text-slate-400 ${article.expanded ? '' : 'line-clamp-3'}`}>
                                             {article.content.replace(/<[^>]*>/g, '')}
                                         </p>
                                         <button
@@ -162,7 +162,7 @@ export default function NewsModal({ onClose, onSaveText }) {
                                                 e.stopPropagation();
                                                 setArticles(prev => prev.map((a, i) => i === idx ? { ...a, expanded: !a.expanded } : a));
                                             }}
-                                            className="text-xs text-indigo-600 font-medium mt-1 hover:underline"
+                                            className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-1 hover:underline"
                                         >
                                             {article.expanded ? 'Show Less' : 'Read More'}
                                         </button>
@@ -172,7 +172,7 @@ export default function NewsModal({ onClose, onSaveText }) {
                                         onClick={() => handleAdapt(article)}
                                         disabled={adaptingId !== null}
                                         className={`w-full py-2.5 rounded-lg font-medium text-sm flex items-center justify-center gap-2 transition ${adaptingId === article.link
-                                            ? 'bg-indigo-100 text-indigo-700'
+                                            ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300'
                                             : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm hover:shadow'
                                             }`}
                                     >

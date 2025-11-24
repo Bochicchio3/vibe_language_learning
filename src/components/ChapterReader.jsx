@@ -184,7 +184,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
 
     return (
         <div
-            className="max-w-3xl mx-auto bg-white min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col relative"
+            className="max-w-3xl mx-auto bg-white dark:bg-slate-900 min-h-[80vh] shadow-sm rounded-xl overflow-hidden flex flex-col relative"
             onMouseUp={handleSelection}
         >
             {/* Selection Popup */}
@@ -203,14 +203,14 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                 </div>
             )}
             {/* Toolbar */}
-            <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-10">
+            <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex justify-between items-center sticky top-0 z-10">
                 <button
                     onClick={() => setView('book_detail')}
-                    className="text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                    className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
                 >
                     <ChevronLeft size={18} /> Back to Book
                 </button>
-                <div className="font-bold text-slate-700">
+                <div className="font-bold text-slate-700 dark:text-slate-200">
                     Chapter {chapter.number}: {chapter.title}
                 </div>
                 <div className="flex gap-2 items-center">
@@ -229,7 +229,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                     {simplifiedContent ? (
                         <button
                             onClick={() => setShowingSimplified(!showingSimplified)}
-                            className={`p-2 rounded-full transition-colors ${showingSimplified ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                            className={`p-2 rounded-full transition-colors ${showingSimplified ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
                             title={showingSimplified ? "Show Original" : "Show Simplified"}
                         >
                             <RotateCcw size={20} />
@@ -238,7 +238,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                         <button
                             onClick={handleSimplify}
                             disabled={isSimplifying || ollamaModels.length === 0}
-                            className={`p-2 rounded-full transition-colors ${isSimplifying ? 'bg-indigo-50 text-indigo-400' : 'hover:bg-slate-200 text-slate-700'}`}
+                            className={`p-2 rounded-full transition-colors ${isSimplifying ? 'bg-indigo-50 dark:bg-indigo-900 text-indigo-400' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
                             title="Simplify Text (AI)"
                         >
                             {isSimplifying ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
@@ -252,7 +252,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                     )}
                     <button
                         onClick={handleSpeak}
-                        className={`p-2 rounded-full transition-colors ${isPlaying ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-200 text-slate-700'}`}
+                        className={`p-2 rounded-full transition-colors ${isPlaying ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'}`}
                         title={isPlaying ? "Stop Reading" : "Read Aloud"}
                         disabled={isModelLoading}
                     >
@@ -263,13 +263,13 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
 
             {/* Content */}
             <div className="p-8 md:p-12 flex-grow overflow-y-auto">
-                <div className="text-xl leading-loose text-slate-800 font-serif">
+                <div className="text-xl leading-loose text-slate-800 dark:text-slate-200 font-serif">
                     {sentences.map((sentence, sIndex) => {
                         const isCurrentSentence = sIndex === currentSentenceIndex;
                         const tokens = tokenize(sentence);
 
                         return (
-                            <span key={sIndex} className={`transition-colors duration-300 ${isCurrentSentence ? 'bg-yellow-100 rounded px-1 -mx-1' : ''}`}>
+                            <span key={sIndex} className={`transition-colors duration-300 ${isCurrentSentence ? 'bg-yellow-100 dark:bg-yellow-900 rounded px-1 -mx-1' : ''}`}>
                                 {tokens.map((token, tIndex) => {
                                     const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
                                     const isTranslating = translatingWord === cleanToken;
@@ -312,7 +312,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end">
+            <div className="p-6 border-t border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex justify-end">
                 <button
                     onClick={handleComplete}
                     disabled={completing}

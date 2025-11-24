@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, Loader2, RefreshCw, MessageCircle, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, RefreshCw, MessageCircle, Trash2, MessageSquareWarning } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { recordActivitySession, CATEGORIES } from '../services/activityTracker';
+import FeedbackModal from './FeedbackModal';
 
 export default function ChatView({ isWidget = false, initialMessage = '' }) {
     const { currentUser } = useAuth();
@@ -18,6 +19,7 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
     const [streamingMessage, setStreamingMessage] = useState('');
     const messagesEndRef = useRef(null);
     const [sessionStart] = useState(Date.now());
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
     // Initial Message Handling
     useEffect(() => {
@@ -331,6 +333,13 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                                 <option key={model.name} value={model.name}>{model.name}</option>
                             ))}
                         </select>
+                        <button
+                            onClick={() => setShowFeedbackModal(true)}
+                            className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition"
+                            title="Report Issue"
+                        >
+                            <MessageSquareWarning size={18} />
+                        </button>
                         <button onClick={fetchModels} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition">
                             <RefreshCw size={18} />
                         </button>
@@ -401,6 +410,13 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                     </form>
                 </div>
             </div>
+
+            {/* Feedback Modal */}
+            <FeedbackModal
+                isOpen={showFeedbackModal}
+                onClose={() => setShowFeedbackModal(false)}
+                context="ChatView"
+            />
         </div>
     );
 }
