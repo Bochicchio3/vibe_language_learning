@@ -63,6 +63,9 @@ import WritingPractice from './components/WritingPractice';
 import { isDue } from './services/srs';
 import { recordActivitySession, recordReadingSession, CATEGORIES } from './services/activityTracker';
 import { useTTS } from './hooks/useTTS';
+import JourneyView from './components/JourneyView';
+import { useGamification } from './hooks/useGamification';
+import { StreakCounter, XPBar, LevelBadge } from './components/GamificationComponents';
 
 // --- MOCK DATA SEEDS (Used only for initial population if needed) ---
 const INITIAL_TEXTS = [
@@ -110,7 +113,7 @@ const SAMPLE_TEXTS = [
 
 function AuthenticatedApp() {
   // --- STATE ---
-  const [view, setView] = useState('library'); // 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail'
+  const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail'
   const [texts, setTexts] = useState([]);
   const [activeTextId, setActiveTextId] = useState(null);
   const [activeBook, setActiveBook] = useState(null); // New state for active book
@@ -125,7 +128,8 @@ function AuthenticatedApp() {
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [chatInitialMessage, setChatInitialMessage] = useState('');
   const [readingSessionStart, setReadingSessionStart] = useState(null);
-  const { logout, currentUser } = useAuth();
+  const { logout, currentUser, userStats, updateStats } = useAuth();
+  const { level, nextLevelXp, progressToNext } = useGamification(userStats);
 
   // --- FIRESTORE SYNC ---
   useEffect(() => {
