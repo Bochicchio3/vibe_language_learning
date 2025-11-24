@@ -92,14 +92,14 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
     // --- RENDERERS ---
 
     const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 flex items-center gap-4">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-4">
             <div className={`p-3 rounded-lg ${color}`}>
                 <Icon size={24} />
             </div>
             <div>
-                <p className="text-sm text-slate-500 font-medium">{title}</p>
-                <h3 className="text-2xl font-bold text-slate-800">{value}</h3>
-                {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
+                <h3 className="text-2xl font-bold text-slate-800 dark:text-white">{value}</h3>
+                {subtitle && <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{subtitle}</p>}
             </div>
         </div>
     );
@@ -137,7 +137,7 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
             </div>
 
             {/* CONTROLS */}
-            <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+            <div className="flex flex-col md:flex-row gap-4 items-center bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700">
                 <div className="relative flex-1 w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                     <input
@@ -145,7 +145,7 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
                         placeholder="Search words or definitions..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                        className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
                     />
                 </div>
 
@@ -153,7 +153,7 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
                     <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                         <option value="all">All Statuses</option>
                         <option value="due">Due for Review</option>
@@ -164,7 +164,7 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
-                        className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     >
                         <option value="newest">Newest First</option>
                         <option value="oldest">Oldest First</option>
@@ -175,11 +175,11 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
             </div>
 
             {/* WORD LIST */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500">
+                            <tr className="bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-600 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                 <th className="p-4 font-semibold">Word</th>
                                 <th className="p-4 font-semibold">Definition</th>
                                 <th className="p-4 font-semibold">Context</th>
@@ -192,12 +192,12 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
                                 filteredWords.map((word) => (
                                     <tr
                                         key={word.word}
-                                        className="hover:bg-slate-50 transition group cursor-pointer"
+                                        className="hover:bg-slate-50 dark:hover:bg-slate-700 transition group cursor-pointer"
                                         onClick={() => setSelectedWord(word)}
                                     >
-                                        <td className="p-4 font-bold text-slate-800">{word.word}</td>
-                                        <td className="p-4 text-slate-600 max-w-xs truncate" title={word.definition}>{word.definition}</td>
-                                        <td className="p-4 text-slate-500 text-sm max-w-xs truncate italic" title={word.context}>
+                                        <td className="p-4 font-bold text-slate-800 dark:text-white">{word.word}</td>
+                                        <td className="p-4 text-slate-600 dark:text-slate-300 max-w-xs truncate" title={word.definition}>{word.definition}</td>
+                                        <td className="p-4 text-slate-500 dark:text-slate-400 text-sm max-w-xs truncate italic" title={word.context}>
                                             "{word.context}"
                                         </td>
                                         <td className="p-4">
@@ -245,20 +245,20 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
             {/* DETAIL MODAL (Placeholder for next step) */}
             {selectedWord && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setSelectedWord(null)}>
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 border-b border-slate-100 flex justify-between items-start">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-start">
                             <div>
-                                <h2 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
+                                <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                                     {selectedWord.word}
                                     <button
                                         onClick={() => speak(selectedWord.word)}
-                                        className="p-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition"
+                                        className="p-2 rounded-full bg-indigo-50 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition"
                                         title="Listen"
                                     >
                                         <Volume2 size={24} />
                                     </button>
                                 </h2>
-                                <p className="text-slate-500 mt-1">Added on {selectedWord.createdAt?.toDate()?.toLocaleDateString() || 'Unknown Date'}</p>
+                                <p className="text-slate-500 dark:text-slate-400 mt-1">Added on {selectedWord.createdAt?.toDate()?.toLocaleDateString() || 'Unknown Date'}</p>
                             </div>
                             <button onClick={() => setSelectedWord(null)} className="p-2 hover:bg-slate-100 rounded-full transition">
                                 <X size={24} className="text-slate-400" />
@@ -267,15 +267,15 @@ const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
 
                         <div className="p-6 space-y-6">
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Definition</label>
-                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-lg text-slate-800">
+                                <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Definition</label>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-100 dark:border-slate-600 text-lg text-slate-800 dark:text-white">
                                     {selectedWord.definition}
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Context</label>
-                                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 text-slate-700 italic">
+                                <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Context</label>
+                                <div className="p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-100 dark:border-indigo-800 text-slate-700 dark:text-slate-300 italic">
                                     "{selectedWord.context}"
                                 </div>
                             </div>

@@ -12,11 +12,32 @@ export default function Flashcard({ word, onGrade }) {
     const rotate = useTransform(x, [-200, 200], [-10, 10]); // Reduced rotation
     const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
 
-    // Background color indicators
-    const bgRight = useTransform(x, [0, 150], ["rgba(255, 255, 255, 0)", "rgba(74, 222, 128, 0.2)"]); // Green (Good)
-    const bgLeft = useTransform(x, [-150, 0], ["rgba(244, 63, 94, 0.2)", "rgba(255, 255, 255, 0)"]); // Red (Again)
-    const bgUp = useTransform(y, [-150, 0], ["rgba(59, 130, 246, 0.2)", "rgba(255, 255, 255, 0)"]); // Blue (Easy) - Note: Up is negative Y
-    const bgDown = useTransform(y, [0, 150], ["rgba(255, 255, 255, 0)", "rgba(249, 115, 22, 0.2)"]); // Orange (Hard)
+    // Dynamic background color based on drag position
+    const backgroundColor = useTransform([x, y], ([latestX, latestY]) => {
+        const threshold = 150;
+        const absX = Math.abs(latestX);
+        const absY = Math.abs(latestY);
+
+        if (absX > absY) {
+            // Horizontal
+            if (latestX > 0) {
+                // Right (Green) -> Easy
+                return `rgba(74, 222, 128, ${Math.min(absX / threshold * 0.2, 0.2)})`;
+            } else {
+                // Left (Red) -> Again
+                return `rgba(244, 63, 94, ${Math.min(absX / threshold * 0.2, 0.2)})`;
+            }
+        } else {
+            // Vertical
+            if (latestY < 0) {
+                // Up (Yellow) -> Hard
+                return `rgba(234, 179, 8, ${Math.min(absY / threshold * 0.2, 0.2)})`;
+            } else {
+                // Down (Blue) -> Good
+                return `rgba(59, 130, 246, ${Math.min(absY / threshold * 0.2, 0.2)})`;
+            }
+        }
+    });
 
     // Reset state when word changes
     useEffect(() => {
@@ -38,9 +59,9 @@ export default function Flashcard({ word, onGrade }) {
 
             switch (e.key) {
                 case 'ArrowLeft': onGrade('again'); break;
-                case 'ArrowRight': onGrade('good'); break;
-                case 'ArrowUp': onGrade('easy'); break;
-                case 'ArrowDown': onGrade('hard'); break;
+                case 'ArrowRight': onGrade('easy'); break; // Right is now Easy
+                case 'ArrowUp': onGrade('hard'); break;    // Up is now Hard
+                case 'ArrowDown': onGrade('good'); break;  // Down is now Good
                 case ' ': setIsFlipped(false); break; // Space to flip back
             }
         };
@@ -57,18 +78,18 @@ export default function Flashcard({ word, onGrade }) {
         // Prioritize the axis with larger movement
         if (Math.abs(xOffset) > Math.abs(yOffset)) {
             if (xOffset > threshold) {
-                onGrade('good');
+                onGrade('easy'); // Right -> Easy
             } else if (xOffset < -threshold) {
-                onGrade('again');
+                onGrade('again'); // Left -> Again
             } else {
                 animate(x, 0, { type: "spring", stiffness: 300, damping: 20 });
                 animate(y, 0, { type: "spring", stiffness: 300, damping: 20 });
             }
         } else {
-            if (yOffset < -threshold) { // Up
-                onGrade('easy');
-            } else if (yOffset > threshold) { // Down
+            if (yOffset < -threshold) { // Up -> Hard
                 onGrade('hard');
+            } else if (yOffset > threshold) { // Down -> Good
+                onGrade('good');
             } else {
                 animate(x, 0, { type: "spring", stiffness: 300, damping: 20 });
                 animate(y, 0, { type: "spring", stiffness: 300, damping: 20 });
@@ -83,11 +104,11 @@ export default function Flashcard({ word, onGrade }) {
             {/* Background indicators for swipe */}
             <div className="absolute inset-0 flex justify-between items-center px-8 pointer-events-none z-0">
                 <div className={`text-4xl font-bold text-rose-500 transition-opacity duration-200 ${x.get() < -50 ? 'opacity-100' : 'opacity-0'}`}>AGAIN</div>
-                <div className={`text-4xl font-bold text-green-500 transition-opacity duration-200 ${x.get() > 50 ? 'opacity-100' : 'opacity-0'}`}>GOOD</div>
+                <div className={`text-4xl font-bold text-green-500 transition-opacity duration-200 ${x.get() > 50 ? 'opacity-100' : 'opacity-0'}`}>EASY</div>
             </div>
             <div className="absolute inset-0 flex flex-col justify-between items-center py-8 pointer-events-none z-0">
-                <div className={`text-4xl font-bold text-blue-500 transition-opacity duration-200 ${y.get() < -50 ? 'opacity-100' : 'opacity-0'}`}>EASY</div>
-                <div className={`text-4xl font-bold text-orange-500 transition-opacity duration-200 ${y.get() > 50 ? 'opacity-100' : 'opacity-0'}`}>HARD</div>
+                <div className={`text-4xl font-bold text-yellow-500 transition-opacity duration-200 ${y.get() < -50 ? 'opacity-100' : 'opacity-0'}`}>HARD</div>
+                <div className={`text-4xl font-bold text-blue-500 transition-opacity duration-200 ${y.get() > 50 ? 'opacity-100' : 'opacity-0'}`}>GOOD</div>
             </div>
 
             <motion.div
@@ -102,19 +123,24 @@ export default function Flashcard({ word, onGrade }) {
                 >
                     {/* Front */}
                     <motion.div
-                        style={{ backgroundColor: x.get() > 0 ? bgRight : (x.get() < 0 ? bgLeft : (y.get() < 0 ? bgUp : bgDown)) }}
                         className="absolute w-full h-full backface-hidden bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-8 overflow-hidden"
                     >
-                        <div className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4 flex-shrink-0">German</div>
+                        {/* Color Overlay */}
+                        <motion.div
+                            style={{ backgroundColor }}
+                            className="absolute inset-0 z-0"
+                        />
 
-                        <div className="flex-grow flex flex-col justify-center w-full overflow-y-auto custom-scrollbar">
+                        <div className="relative z-10 text-xs font-bold text-indigo-500 uppercase tracking-wider mb-4 flex-shrink-0">German</div>
+
+                        <div className="relative z-10 flex-grow flex flex-col justify-center w-full overflow-y-auto custom-scrollbar">
                             <h2 className="text-4xl md:text-5xl font-bold text-slate-800 text-center mb-6 break-words">{word.id}</h2>
 
                             {/* Context Toggle */}
                             {word.context && (
                                 <div className="w-full mt-4 z-10" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                                     <button
-                                        onClick={() => setShowContext(!showContext)}
+                                        onClick={(e) => { e.stopPropagation(); setShowContext(!showContext); }}
                                         className="text-xs text-indigo-600 font-bold uppercase tracking-wider hover:text-indigo-800 transition flex items-center justify-center gap-1 mx-auto mb-2"
                                     >
                                         {showContext ? 'Hide Context' : 'Show Context'}
@@ -166,7 +192,7 @@ export default function Flashcard({ word, onGrade }) {
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); onGrade('hard'); }}
-                                className="flex flex-col items-center justify-center p-2 rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 transition"
+                                className="flex flex-col items-center justify-center p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition"
                             >
                                 <span className="font-bold text-sm">Hard</span>
                                 <span className="text-[10px] opacity-70">2d</span>

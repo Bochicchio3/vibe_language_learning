@@ -179,12 +179,12 @@ export default function NewsModal({ onClose, onSaveText }) {
                                         {adaptingId === article.link ? (
                                             <>
                                                 <Loader2 size={16} className="animate-spin" />
-                                                Simplifying...
+                                                Expanding & Simplifying...
                                             </>
                                         ) : (
                                             <>
                                                 <Sparkles size={16} />
-                                                Simplify & Read
+                                                Expand & Read
                                             </>
                                         )}
                                     </button>

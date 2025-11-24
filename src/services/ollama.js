@@ -410,21 +410,24 @@ export const adaptContent = async (text, level, model, targetLanguage = "German"
 You are an expert ${targetLanguage} language teacher and editor.
 Your task is to adapt the provided text for a learner at the ${level} level.
 
+The input text might be a short summary. Your goal is to EXPAND it into a full, engaging article (approx. 300-500 words).
+
 RULES:
 1. **Language**: The output MUST be in ${targetLanguage}.
 2. **Content**: 
-   - Adapt the text to ${level} level.
-   - Maintain the original meaning and flow.
+   - Expand the provided summary into a complete story/article.
+   - Use the summary as the core facts but elaborate on context, background, and details to make it a full narrative.
+   - Maintain the original meaning but make it longer and more engaging.
    - IGNORE all metadata, copyright notices, headers, footers.
 3. **Difficulty**: Adapt the vocabulary and grammar strictly to CEFR level ${level}.
 4. **Output Format**: You MUST return a valid JSON object with EXACTLY these two fields:
    - "reasoning": A brief explanation (in English) of what you changed.
-   - "adapted_text": The final adapted ${targetLanguage} text.
+   - "adapted_text": The final adapted ${targetLanguage} text (should be 300-500 words).
 
 Example JSON:
 {
-  "reasoning": "Simplified vocabulary and sentence structure for A2 level.",
-  "adapted_text": "Adapted text in ${targetLanguage}..."
+  "reasoning": "Expanded the summary into a full article and simplified vocabulary for A2 level.",
+  "adapted_text": "Full expanded text in ${targetLanguage}..."
 }
 Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
 `;

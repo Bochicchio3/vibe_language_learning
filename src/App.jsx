@@ -4,6 +4,7 @@ import BookDetailView from './components/BookDetailView';
 import ChapterReader from './components/ChapterReader';
 import ChatView from './components/ChatView';
 import ChatWidget from './components/ChatWidget';
+import SettingsModal from './components/SettingsModal';
 import {
   BookOpen,
   Highlighter,
@@ -28,7 +29,9 @@ import {
   FileText,
   PenTool,
   Play,
-  MoreVertical
+  MoreVertical,
+  Sun,
+  Moon
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import ePub from 'epubjs';
@@ -37,6 +40,7 @@ import ePub from 'epubjs';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import LoginView from './components/LoginView';
 import { db } from './firebase';
 import {
@@ -117,8 +121,7 @@ const SAMPLE_TEXTS = [
 function AuthenticatedApp() {
   // --- STATE ---
   const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail'
-  const [texts, setTexts] = useState([]);
-  const [activeTextId, setActiveTextId] = useState(null);
+  const [activeText, setActiveText] = useState(null); // Changed from ID to object
   const [activeBook, setActiveBook] = useState(null); // New state for active book
   const [activeChapter, setActiveChapter] = useState(null); // New state for active chapter
   const [savedVocab, setSavedVocab] = useState({}); // format: {"word": {definition: "", context: "" } }
@@ -131,37 +134,15 @@ function AuthenticatedApp() {
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [chatInitialMessage, setChatInitialMessage] = useState('');
   const [readingSessionStart, setReadingSessionStart] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { logout, currentUser, userStats, updateStats } = useAuth();
   const { level, nextLevelXp, progressToNext } = useGamification(userStats);
+  const { theme, toggleTheme } = useTheme();
 
   // --- FIRESTORE SYNC ---
   useEffect(() => {
     if (!currentUser) return;
-
-    // Sync Texts
-    console.log("Syncing texts for user:", currentUser.uid);
-    const textsRef = collection(db, 'users', currentUser.uid, 'texts');
-    const q = query(textsRef, orderBy('createdAt', 'desc'));
-
-    const unsubscribeTexts = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
-      const loadedTexts = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      console.log("Loaded texts:", loadedTexts);
-      console.log("Pending writes:", snapshot.metadata.hasPendingWrites);
-      setIsSyncing(snapshot.metadata.hasPendingWrites);
-
-      // Seed initial data if empty (optional, for demo purposes)
-      if (loadedTexts.length === 0 && !localStorage.getItem('seeded')) {
-        INITIAL_TEXTS.forEach(async (t) => {
-          await addDoc(textsRef, { ...t, createdAt: serverTimestamp() });
-        });
-        localStorage.setItem('seeded', 'true');
-      } else {
-        setTexts(loadedTexts);
-      }
-    });
 
     // Sync Vocab
     const vocabRef = collection(db, 'users', currentUser.uid, 'vocab');
@@ -174,7 +155,6 @@ function AuthenticatedApp() {
     });
 
     return () => {
-      unsubscribeTexts();
       unsubscribeVocab();
     };
   }, [currentUser]);
@@ -193,20 +173,20 @@ function AuthenticatedApp() {
       const duration = Math.floor((Date.now() - readingSessionStart) / 1000);
       if (duration >= 10 && currentUser) {
         let textTitle = 'Unknown Text';
-        if (view !== 'reader' && activeText) {
+        if (view === 'reader' && activeText) {
           textTitle = activeText.title;
         } else if (activeChapter && activeBook) {
           textTitle = `${activeBook.title} - ${activeChapter.title}`;
         }
 
-        const textId = activeTextId || activeChapter?.id || 'unknown';
+        const textId = activeText?.id || activeChapter?.id || 'unknown';
         recordReadingSession(currentUser.uid, textId, textTitle, duration).catch(err => {
           console.error('Error recording reading session:', err);
         });
       }
       setReadingSessionStart(null);
     }
-  }, [view, currentUser]);
+  }, [view, currentUser, activeText]);
 
   const handleSaveText = async ({ title, content, level }) => {
     try {
@@ -230,7 +210,6 @@ function AuthenticatedApp() {
 
   // --- HELPERS ---
   const dueCount = Object.values(savedVocab).filter(word => isDue(word.srs)).length;
-  const activeText = texts.find(t => t.id === activeTextId);
 
   // Tokenize text to preserve punctuation but make words clickable
   const tokenize = (str) => {
@@ -1434,11 +1413,17 @@ function AuthenticatedApp() {
 
   // --- MAIN LAYOUT ---
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-200">
       {/* Navigation Sidebar (Mobile: Bottom bar, Desktop: Sidebar) */}
-      <nav className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-2 z-50 md:top-0 md:left-0 md:w-20 md:h-screen md:flex-col md:border-r md:border-t-0 md:p-3 flex justify-around md:justify-start md:pt-8 md:gap-8 shadow-lg md:shadow-none">
+      <nav className="fixed bottom-0 left-0 w-full bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-2 z-50 md:top-0 md:left-0 md:w-20 md:h-screen md:flex-col md:border-r md:border-t-0 md:p-3 flex justify-around md:justify-start md:pt-8 md:gap-8 shadow-lg md:shadow-none transition-colors duration-200">
         <div className="hidden md:flex justify-center mb-4">
-          <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">L</div>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xl hover:bg-indigo-700 transition cursor-pointer"
+            title="Settings"
+          >
+            L
+          </button>
         </div>
 
         {/* Core Items - Always Visible */}
@@ -1555,7 +1540,7 @@ function AuthenticatedApp() {
             >
               <Highlighter size={18} className="text-indigo-500" /> Vocab
             </button>
-            <div className="p-2 bg-slate-50 text-center">
+            <div className="p-2 bg-slate-50 dark:bg-slate-800 text-center border-t border-slate-100 dark:border-slate-700">
               <button onClick={logout} className="text-xs text-red-500 font-medium flex items-center justify-center gap-1 w-full py-1">
                 <LogOut size={14} /> Log Out
               </button>
@@ -1574,7 +1559,8 @@ function AuthenticatedApp() {
           <div className="w-8 h-8 rounded-full bg-slate-200 mx-auto flex items-center justify-center text-slate-500" title={currentUser?.email}>
             <Languages size={16} />
           </div>
-          <div className="text-xs text-slate-400">v1.1 (Blocking)</div>
+          <div className="text-xs text-slate-400">v1.1</div>
+
           <button onClick={logout} className="text-slate-400 hover:text-red-500 transition" title="Log Out">
             <LogOut size={20} className="mx-auto" />
           </button>
@@ -1586,12 +1572,10 @@ function AuthenticatedApp() {
         <div className="h-full overflow-y-auto custom-scrollbar">
           {view === 'library' && (
             <LibraryView
-              texts={texts}
               savedVocab={savedVocab}
-              onSelect={(id) => { setActiveTextId(id); setView('reader'); setShowQuiz(false); }}
-              onDelete={handleDeleteText}
-              onToggleRead={handleToggleRead}
-              onSeed={seedLibrary}
+              isAdmin={isAdmin}
+              setIsAdmin={setIsAdmin}
+              onSelect={(text) => { setActiveText(text); setView('reader'); setShowQuiz(false); }}
               onAdd={() => setView('add')}
               onGenerate={(topic) => {
                 // Store the topic and navigate to generator view
@@ -1654,6 +1638,13 @@ function AuthenticatedApp() {
         setIsOpen={setChatWidgetOpen}
         initialMessage={chatInitialMessage}
       />
+
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        isAdmin={isAdmin}
+        setIsAdmin={setIsAdmin}
+      />
     </div>
   );
 }
@@ -1661,7 +1652,9 @@ function AuthenticatedApp() {
 export default function LinguistApp() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

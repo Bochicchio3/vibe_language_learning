@@ -41,12 +41,12 @@ export default function LoginView() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-100 px-4">
-            <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+        <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 px-4 transition-colors duration-200">
+            <div className="max-w-md w-full bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8 transition-colors duration-200">
                 <div className="text-center mb-8">
                     <div className="w-16 h-16 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-3xl mx-auto mb-4">L</div>
-                    <h2 className="text-3xl font-bold text-slate-800">Welcome to Linguist</h2>
-                    <p className="text-slate-500 mt-2">Your personal language learning companion</p>
+                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Welcome to Linguist</h2>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2">Your personal language learning companion</p>
                 </div>
 
                 {error && (
@@ -58,24 +58,24 @@ export default function LoginView() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
                         <input
                             type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                            className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
                             placeholder="you@example.com"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
                         <input
                             type="password"
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                            className="w-full p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
                             placeholder="••••••••"
                         />
                     </div>
@@ -95,14 +95,14 @@ export default function LoginView() {
                             <div className="w-full border-t border-slate-200"></div>
                         </div>
                         <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-slate-500">Or continue with</span>
+                            <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Or continue with</span>
                         </div>
                     </div>
 
                     <button
                         onClick={handleGoogleLogin}
                         disabled={loading}
-                        className="mt-6 w-full bg-white border border-slate-300 text-slate-700 py-3 rounded-lg font-semibold hover:bg-slate-50 transition flex items-center justify-center gap-2"
+                        className="mt-6 w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-3 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-600 transition flex items-center justify-center gap-2"
                     >
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path
@@ -127,11 +127,11 @@ export default function LoginView() {
                 </div>
 
                 <div className="mt-8 text-center">
-                    <p className="text-slate-600">
+                    <p className="text-slate-600 dark:text-slate-400">
                         {isLogin ? "Don't have an account? " : "Already have an account? "}
                         <button
                             onClick={() => setIsLogin(!isLogin)}
-                            className="text-indigo-600 font-semibold hover:underline"
+                            className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline"
                         >
                             {isLogin ? 'Sign Up' : 'Log In'}
                         </button>

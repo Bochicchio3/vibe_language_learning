@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Brain, CheckCircle, RefreshCw, Plus, Sparkles, X, Loader2, Library, Layers } from 'lucide-react';
-import { collection, getDocs, doc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { Brain, CheckCircle, RefreshCw, Plus, Sparkles, X, Loader2, Library, Layers, Trash2, GraduationCap } from 'lucide-react';
+import { collection, getDocs, doc, setDoc, serverTimestamp, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateNextReview, isDue } from '../services/srs';
@@ -45,6 +45,9 @@ export default function FlashcardView() {
             const snapshot = await getDocs(vocabRef);
 
             const vocabList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Filter out learned words if you want to hide them completely, 
+            // or keep them but ensure they aren't 'due'. 
+            // For now, we'll keep them in allVocab but they won't be due if learned=true.
             setAllVocab(vocabList);
             console.log("Fetched vocab count:", vocabList.length);
 
@@ -56,7 +59,7 @@ export default function FlashcardView() {
                     deckMap[deckName] = { name: deckName, total: 0, due: 0 };
                 }
                 deckMap[deckName].total++;
-                if (isDue(word.srs)) {
+                if (isDue(word.srs) && !word.learned) {
                     deckMap[deckName].due++;
                 }
             });
@@ -85,7 +88,8 @@ export default function FlashcardView() {
             filtered = allVocab.filter(word => (word.deck || 'General') === deckName);
         }
 
-        const due = filtered.filter(word => isDue(word.srs));
+        // Filter out learned words from review
+        const due = filtered.filter(word => isDue(word.srs) && !word.learned);
         setDueCards(due);
         setCurrentIndex(0);
         setSessionComplete(false);
@@ -181,6 +185,70 @@ export default function FlashcardView() {
         }
     };
 
+    const handleDelete = async () => {
+        const currentCard = dueCards[currentIndex];
+        if (!currentCard) return;
+
+        if (!window.confirm(`Are you sure you want to delete "${currentCard.id}"? This cannot be undone.`)) {
+            return;
+        }
+
+        // Optimistic UI update
+        const newDueCards = dueCards.filter(c => c.id !== currentCard.id);
+        setDueCards(newDueCards);
+        // If we deleted the last card, session is complete. 
+        // If we deleted a card in the middle, currentIndex stays same (showing next card)
+        // If we deleted the *last* card but there were others before it, we need to adjust index?
+        // Actually, if we delete the card at currentIndex, the next card slides into currentIndex.
+        // If currentIndex was the last index, we should finish.
+        if (newDueCards.length === 0) {
+            setSessionComplete(true);
+        } else if (currentIndex >= newDueCards.length) {
+            setSessionComplete(true);
+        }
+
+        try {
+            await deleteDoc(doc(db, 'users', currentUser.uid, 'vocab', currentCard.id));
+            // Update allVocab too so it doesn't reappear if we go back to library
+            setAllVocab(prev => prev.filter(c => c.id !== currentCard.id));
+        } catch (error) {
+            console.error("Error deleting card:", error);
+            alert("Failed to delete card.");
+        }
+    };
+
+    const handleMarkLearned = async () => {
+        const currentCard = dueCards[currentIndex];
+        if (!currentCard) return;
+
+        if (!window.confirm(`Mark "${currentCard.id}" as learned? It will stop appearing in reviews.`)) {
+            return;
+        }
+
+        // Optimistic UI update
+        const newDueCards = dueCards.filter(c => c.id !== currentCard.id);
+        setDueCards(newDueCards);
+        if (newDueCards.length === 0) {
+            setSessionComplete(true);
+        } else if (currentIndex >= newDueCards.length) {
+            setSessionComplete(true);
+        }
+
+        try {
+            const cardRef = doc(db, 'users', currentUser.uid, 'vocab', currentCard.id);
+            await setDoc(cardRef, {
+                learned: true,
+                srs: { ...currentCard.srs, interval: 9999, dueDate: null } // Effectively remove from SRS
+            }, { merge: true });
+
+            // Update allVocab
+            setAllVocab(prev => prev.map(c => c.id === currentCard.id ? { ...c, learned: true } : c));
+        } catch (error) {
+            console.error("Error marking as learned:", error);
+            alert("Failed to mark as learned.");
+        }
+    };
+
     if (loading) {
         return <div className="flex justify-center items-center h-64 text-slate-500">Loading flashcards...</div>;
     }
@@ -192,7 +260,7 @@ export default function FlashcardView() {
                     <Brain size={40} />
                 </div>
                 <h2 className="text-2xl font-bold text-slate-800 mb-2">Session Complete!</h2>
-                <p className="text-slate-500 mb-8">You reviewed {dueCards.length} words in "{selectedDeck}".</p>
+                <p className="text-slate-500 mb-8">You reviewed {cardsReviewed} words in "{selectedDeck}".</p>
                 <div className="flex gap-4 justify-center">
                     <button
                         onClick={() => setSelectedDeck(null)}
@@ -244,9 +312,9 @@ export default function FlashcardView() {
                             <div className="bg-indigo-100 p-3 rounded-xl text-indigo-600">
                                 <Layers size={24} />
                             </div>
-                            {allVocab.filter(w => isDue(w.srs)).length > 0 && (
+                            {allVocab.filter(w => isDue(w.srs) && !w.learned).length > 0 && (
                                 <span className="bg-rose-100 text-rose-600 px-3 py-1 rounded-full text-xs font-bold">
-                                    {allVocab.filter(w => isDue(w.srs)).length} due
+                                    {allVocab.filter(w => isDue(w.srs) && !w.learned).length} due
                                 </span>
                             )}
                         </div>
@@ -422,14 +490,22 @@ export default function FlashcardView() {
                         <Brain className="text-indigo-500" /> {selectedDeck}
                     </h2>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={() => setShowGenerateModal(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition"
+                        onClick={handleMarkLearned}
+                        className="p-2 hover:bg-green-100 rounded-lg text-slate-400 hover:text-green-600 transition"
+                        title="Mark as Learned"
                     >
-                        <Sparkles size={16} />
-                        Generate Deck
+                        <GraduationCap size={20} />
                     </button>
+                    <button
+                        onClick={handleDelete}
+                        className="p-2 hover:bg-rose-100 rounded-lg text-slate-400 hover:text-rose-600 transition"
+                        title="Delete Card"
+                    >
+                        <Trash2 size={20} />
+                    </button>
+                    <div className="w-px h-6 bg-slate-200 mx-1"></div>
                     <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-bold">
                         {currentIndex + 1} / {dueCards.length}
                     </span>
