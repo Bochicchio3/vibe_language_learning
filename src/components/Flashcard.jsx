@@ -91,12 +91,10 @@ export default function Flashcard({ word, onGrade }) {
             </div>
 
             <motion.div
-                style={{ x, y, rotate, opacity, touchAction: 'none' }}
+                style={{ x, y, rotate, opacity }}
                 drag
-                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                dragElastic={0.7}
                 onDragEnd={handleDragEnd}
-                className="relative w-full h-full cursor-grab active:cursor-grabbing z-10"
+                className="relative w-full h-full cursor-grab active:cursor-grabbing z-10 touch-none"
             >
                 <motion.div
                     className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}

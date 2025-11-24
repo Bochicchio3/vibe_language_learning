@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Book, CheckCircle, Lock, Unlock, PlayCircle, RotateCcw, Plus, Upload, X, Loader2, Sparkles, Globe, User, Shield, Share2, Download } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Book, CheckCircle, Lock, Unlock, PlayCircle, RotateCcw, Plus, Upload, X, Loader2, Sparkles, Globe, User, Shield, Share2, Download, Search, Filter, Wand2 } from 'lucide-react';
 import { collection, getDocs, setDoc, doc, query, orderBy, serverTimestamp, addDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import seedData from '../data/ein_neues_leben.json';
 import { extractTextFromPDF, chunkText } from '../services/pdfProcessor';
-import { fetchModels } from '../services/ollama';
+import { fetchModels, detectLevel } from '../services/ollama';
 
 export default function BooksView({ setView, setActiveBook, onImportBook }) {
     const [privateBooks, setPrivateBooks] = useState([]);
@@ -18,6 +18,10 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
     const [activeTab, setActiveTab] = useState('private'); // 'private' | 'public'
     const [isAdmin, setIsAdmin] = useState(false); // Simulation for now
 
+    // Search & Filter State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedLevels, setSelectedLevels] = useState([]);
+
     // Add Book State
     const [showAddModal, setShowAddModal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -29,6 +33,8 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
     const [ollamaModels, setOllamaModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState('');
     const [targetLanguage, setTargetLanguage] = useState('German');
+    const [isDetectingLevel, setIsDetectingLevel] = useState(false);
+    const [detectedReasoning, setDetectedReasoning] = useState('');
 
     // PDF Enhancements State
     const [pdfFile, setPdfFile] = useState(null);
@@ -46,13 +52,13 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
     }, [currentUser, activeTab]); // Refetch when tab changes to ensure fresh data
 
     useEffect(() => {
-        if (showAddModal && shouldAdapt) {
+        if (showAddModal) {
             fetchModels().then(models => {
                 setOllamaModels(models);
                 if (models.length > 0 && !selectedModel) setSelectedModel(models[0].name);
             });
         }
-    }, [showAddModal, shouldAdapt]);
+    }, [showAddModal]);
 
     const fetchBooks = async () => {
         setLoading(true);
@@ -242,6 +248,28 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
         }
     };
 
+    const handleAutoDetectLevel = async () => {
+        if (!previewText) {
+            alert("Please upload a PDF first to detect level.");
+            return;
+        }
+
+        setIsDetectingLevel(true);
+        setDetectedReasoning('');
+        try {
+            const result = await detectLevel(previewText, selectedModel, targetLanguage);
+            if (result.level) {
+                setLevel(result.level);
+                setDetectedReasoning(result.reasoning);
+            }
+        } catch (error) {
+            console.error("Auto detect failed:", error);
+            alert("Failed to detect level.");
+        } finally {
+            setIsDetectingLevel(false);
+        }
+    };
+
     const handleImport = async () => {
         if (!title || bookChunks.length === 0) return;
 
@@ -256,12 +284,30 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
         setActiveTab('private');
     };
 
+    const toggleLevel = (l) => {
+        setSelectedLevels(prev =>
+            prev.includes(l) ? prev.filter(item => item !== l) : [...prev, l]
+        );
+    };
+
+    // Filter Logic
+    const filteredBooks = useMemo(() => {
+        const sourceBooks = activeTab === 'private' ? privateBooks : publicBooks;
+
+        return sourceBooks.filter(book => {
+            // Search Filter
+            const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase());
+
+            // Level Filter
+            const matchesLevel = selectedLevels.length === 0 || selectedLevels.includes(book.level);
+
+            return matchesSearch && matchesLevel;
+        });
+    }, [activeTab, privateBooks, publicBooks, searchQuery, selectedLevels]);
+
     if (loading && !privateBooks.length && !publicBooks.length) { // Only show full loader on initial load
         return <div className="text-center py-12 text-slate-500">Loading library...</div>;
     }
-
-    // Determine which books to show
-    const displayBooks = activeTab === 'private' ? privateBooks : publicBooks;
 
     return (
         <div className="max-w-6xl mx-auto relative px-4">
@@ -329,6 +375,48 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                 </button>
             </div>
 
+            {/* Search & Filters */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-8 flex flex-col gap-4">
+                {/* Search Bar */}
+                <div className="relative w-full">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search books..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-slate-50 border-none rounded-xl text-slate-700 placeholder-slate-400 focus:ring-2 focus:ring-indigo-100 focus:bg-white transition outline-none"
+                    />
+                </div>
+
+                {/* Level Filter */}
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar items-center">
+                    <span className="text-sm font-medium text-slate-400 flex items-center mr-2 shrink-0">
+                        <Filter size={14} className="mr-1" /> Level:
+                    </span>
+                    {['A1', 'A2', 'B1', 'B2', 'C1'].map(l => (
+                        <button
+                            key={l}
+                            onClick={() => toggleLevel(l)}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition whitespace-nowrap ${selectedLevels.includes(l)
+                                ? 'bg-slate-800 text-white shadow-md'
+                                : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                                }`}
+                        >
+                            {l}
+                        </button>
+                    ))}
+                    {selectedLevels.length > 0 && (
+                        <button
+                            onClick={() => setSelectedLevels([])}
+                            className="text-xs text-slate-400 hover:text-slate-600 ml-auto"
+                        >
+                            Clear
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {/* Admin Pending Section */}
             {activeTab === 'public' && isAdmin && pendingBooks.length > 0 && (
                 <div className="mb-8 bg-amber-50 border border-amber-200 rounded-xl p-6">
@@ -365,17 +453,17 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
             )}
 
             {/* Books Grid */}
-            {displayBooks.length === 0 ? (
+            {filteredBooks.length === 0 ? (
                 <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-slate-100">
                     <Book size={48} className="mx-auto text-slate-300 mb-4" />
-                    <p className="text-slate-500">No books in {activeTab === 'private' ? 'your library' : 'public library'} yet.</p>
+                    <p className="text-slate-500">No books found.</p>
                     <p className="text-sm text-slate-400 mt-1">
-                        {activeTab === 'private' ? 'Click "Add Book" to import one.' : 'Be the first to contribute!'}
+                        Try adjusting your filters or search query.
                     </p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {displayBooks.map(book => (
+                    {filteredBooks.map(book => (
                         <div key={book.id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition group flex flex-col h-full">
                             <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center text-white p-6 relative shrink-0">
                                 <Book size={48} className="opacity-20 absolute right-4 bottom-4" />
@@ -548,7 +636,27 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
 
                             {/* Level */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Target Level</label>
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase">Target Level</label>
+                                    {previewText && (
+                                        <button
+                                            onClick={handleAutoDetectLevel}
+                                            disabled={isDetectingLevel}
+                                            className="text-xs text-indigo-600 font-bold flex items-center gap-1 hover:underline disabled:opacity-50"
+                                        >
+                                            {isDetectingLevel ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />}
+                                            Auto-detect
+                                        </button>
+                                    )}
+                                </div>
+
+                                {detectedReasoning && (
+                                    <div className="mb-2 p-2 bg-indigo-50 text-indigo-700 text-xs rounded-lg border border-indigo-100 flex items-start gap-2">
+                                        <Sparkles size={14} className="mt-0.5 shrink-0" />
+                                        <span>{detectedReasoning}</span>
+                                    </div>
+                                )}
+
                                 <div className="flex gap-2">
                                     {['A1', 'A2', 'B1', 'B2', 'C1'].map((l) => (
                                         <button

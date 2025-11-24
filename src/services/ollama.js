@@ -480,3 +480,54 @@ Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
         throw error;
     }
 };
+
+export const detectLevel = async (text, model, targetLanguage = "German") => {
+    const systemPrompt = `
+You are an expert ${targetLanguage} language teacher.
+Analyze the provided text and determine its CEFR proficiency level (A1, A2, B1, B2, C1, or C2).
+
+IMPORTANT: Return ONLY a valid JSON object with EXACTLY these two fields:
+- "level": The CEFR level (e.g., "A2").
+- "reasoning": A brief explanation of why this level was chosen.
+
+Example:
+{
+  "level": "B1",
+  "reasoning": "Uses complex sentence structures and vocabulary related to daily life."
+}
+Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
+`;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: text.substring(0, 1000) } // Analyze first 1000 chars
+                ],
+                stream: false,
+                format: "json"
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to detect level');
+        }
+
+        const data = await response.json();
+        let jsonStr = data.message?.content;
+
+        // Cleanup
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        return JSON.parse(jsonStr);
+
+    } catch (error) {
+        console.error('Error detecting level:', error);
+        // Fallback
+        return { level: "A2", reasoning: "Could not detect level automatically." };
+    }
+};
