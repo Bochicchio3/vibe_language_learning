@@ -8,28 +8,40 @@ import * as pdfjsLib from 'pdfjs-dist';
  * @param {File} file - The PDF file object.
  * @returns {Promise<string>} - The full extracted text.
  */
-export const extractTextFromPDF = async (file) => {
+export const extractTextFromPDF = async (file, startPage = 1, endPage = Infinity) => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
 
-    // Process pages sequentially to avoid memory spikes on large docs
-    for (let i = 1; i <= pdf.numPages; i++) {
+    const numPages = pdf.numPages;
+    const effectiveEndPage = Math.min(numPages, endPage);
+    const effectiveStartPage = Math.max(1, Math.min(startPage, effectiveEndPage));
+
+    // Process pages sequentially
+    for (let i = effectiveStartPage; i <= effectiveEndPage; i++) {
         try {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
             const pageText = textContent.items.map(item => item.str).join(' ');
 
-            // Add a page marker or just newlines? 
-            // Newlines are safer for continuous text, maybe double newline for paragraph breaks.
-            fullText += pageText + '\n\n';
+            // Basic cleanup: replace multiple spaces with single space
+            const cleanPageText = pageText.replace(/\s+/g, ' ').trim();
+
+            if (cleanPageText.length > 0) {
+                fullText += cleanPageText + '\n\n';
+            }
         } catch (error) {
             console.warn(`Error extracting text from page ${i}`, error);
             fullText += `[Error reading page ${i}]\n\n`;
         }
     }
 
-    return fullText;
+    return {
+        text: fullText,
+        pageCount: numPages,
+        processedPages: effectiveEndPage - effectiveStartPage + 1,
+        isImageOnly: fullText.trim().length === 0 && numPages > 0
+    };
 };
 
 /**
@@ -38,34 +50,74 @@ export const extractTextFromPDF = async (file) => {
  * @param {number} targetWordCount - Approximate words per chunk.
  * @returns {Array<{title: string, content: string}>} - Array of chapters/chunks.
  */
-export const chunkText = (text, targetWordCount = 1000) => {
-    // 1. Try to split by "Chapter" or "Kapitel" headers if they exist clearly on their own lines.
-    // This is a heuristic and might need refinement.
-    const chapterRegex = /^(Chapter|Kapitel|Teil)\s+\d+|^\d+\.\s+[A-Z]/im;
+export const chunkText = (text, targetWordCount = 1500) => {
+    // 1. Smart Chunking: Try to split by "Chapter" or Roman numerals
+    // Regex matches:
+    // - Roman numerals (I, II, III, IV, V...) on their own line
+    // - "Chapter X" or "Kapitel X"
+    // - Common OCR errors like "IL" for "II"
+    const chapterRegex = /^\s*(?:[IVXLCDM]+\.?|IL\.?|Chapter\s+\d+|Kapitel\s+\d+)\s*$/gim;
 
-    // For now, let's stick to a safer size-based chunking with paragraph preservation, 
-    // as PDF text extraction often messes up formatting making regex detection hard.
+    const splits = [];
+    let match;
+    while ((match = chapterRegex.exec(text)) !== null) {
+        splits.push(match.index);
+    }
 
-    const words = text.split(/\s+/);
-    const chunks = [];
-    let currentChunkWords = [];
-    let chunkIndex = 1;
+    let chunks = [];
 
-    // Simple word count split, but trying to break at paragraphs (double newlines) would be better if we had the raw text structure.
-    // Since we split by whitespace, we lost the paragraph structure in the 'words' array.
-    // Let's go back to splitting by paragraphs first.
+    // If no chapters found, fall back to purely size-based chunking
+    if (splits.length === 0) {
+        console.log("No chapter markers found. Falling back to size-based chunking.");
+        return createSizeBasedChunks(text, targetWordCount);
+    }
 
+    // Add the start of the text if it doesn't start with a chapter
+    if (splits[0] > 0) {
+        chunks.push({
+            title: "Intro / Prologue",
+            content: text.substring(0, splits[0]).trim()
+        });
+    }
+
+    for (let i = 0; i < splits.length; i++) {
+        const start = splits[i];
+        const end = splits[i + 1] || text.length;
+        const chunkContent = text.substring(start, end).trim();
+
+        // Extract title from the first line
+        const titleMatch = chunkContent.match(/^[^\n]+/);
+        const title = titleMatch ? titleMatch[0].trim() : `Chapter ${i + 1}`;
+
+        // If chunk is too big, split it further
+        if (chunkContent.split(/\s+/).length > targetWordCount * 1.5) {
+            const subChunks = createSizeBasedChunks(chunkContent, targetWordCount, title);
+            chunks.push(...subChunks);
+        } else {
+            chunks.push({
+                title: title,
+                content: chunkContent
+            });
+        }
+    }
+
+    // Filter out very small chunks (likely just headers/garbage)
+    return chunks.filter(c => c.content.split(/\s+/).length > 50);
+};
+
+const createSizeBasedChunks = (text, targetWordCount, titlePrefix = "Part") => {
     const paragraphs = text.split(/\n\s*\n/);
+    const chunks = [];
     let currentChunkContent = "";
     let currentWordCount = 0;
+    let chunkIndex = 1;
 
     for (const paragraph of paragraphs) {
         const paragraphWordCount = paragraph.split(/\s+/).length;
 
         if (currentWordCount + paragraphWordCount > targetWordCount && currentWordCount > 0) {
-            // Push current chunk
             chunks.push({
-                title: `Part ${chunkIndex}`,
+                title: `${titlePrefix} ${chunkIndex}`,
                 content: currentChunkContent.trim()
             });
             chunkIndex++;
@@ -77,10 +129,9 @@ export const chunkText = (text, targetWordCount = 1000) => {
         currentWordCount += paragraphWordCount;
     }
 
-    // Push remaining
     if (currentChunkContent.trim()) {
         chunks.push({
-            title: `Part ${chunkIndex}`,
+            title: `${titlePrefix} ${chunkIndex}`,
             content: currentChunkContent.trim()
         });
     }

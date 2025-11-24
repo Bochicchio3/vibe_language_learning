@@ -10,7 +10,7 @@
 export async function translateWord(text, context = "") {
     try {
         // Google Translate 'gtx' endpoint (unofficial but widely used for free access)
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=en&dt=t&q=${encodeURIComponent(text)}`;
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(text)}`;
 
         const response = await fetch(url);
 

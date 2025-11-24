@@ -15,16 +15,16 @@ export const fetchModels = async () => {
     }
 };
 
-export const generateComprehensionQuestions = async (model, textContent) => {
+export const generateComprehensionQuestions = async (model, textContent, targetLanguage = "German") => {
     const systemPrompt = `
-You are a German language teacher. 
-Read the provided text and generate 3 comprehension questions in German with their answers.
+You are a ${targetLanguage} language teacher. 
+Read the provided text and generate 3 comprehension questions in ${targetLanguage} with their answers.
 Return ONLY a valid JSON array of objects. Each object must have a "q" field (question) and an "a" field (answer).
 Do not include any markdown formatting like \`\`\`json or \`\`\`. Just the raw JSON array.
 Example output format:
 [
-  { "q": "Was macht Markus?", "a": "Er geht zur Arbeit." },
-  { "q": "Wie ist das Wetter?", "a": "Die Sonne scheint." }
+  { "q": "Question in ${targetLanguage}?", "a": "Answer in ${targetLanguage}." },
+  { "q": "Question in ${targetLanguage}?", "a": "Answer in ${targetLanguage}." }
 ]
 `;
 
@@ -91,7 +91,7 @@ Example output format:
     }
 };
 
-export const generateStory = async (topic, level, length, theme = "", model) => {
+export const generateStory = async (topic, level, length, theme = "", model, targetLanguage = "German") => {
     const lengthMap = {
         "Short": "approx 100 words",
         "Medium": "approx 250 words",
@@ -99,14 +99,14 @@ export const generateStory = async (topic, level, length, theme = "", model) => 
     };
 
     const systemPrompt = `
-You are a German language teacher.
-Write a German story about "${topic}"${theme ? ` with a theme of "${theme}"` : ""} for a learner at ${level} level.
+You are a ${targetLanguage} language teacher.
+Write a ${targetLanguage} story about "${topic}"${theme ? ` with a theme of "${theme}"` : ""} for a learner at ${level} level.
 Length: ${lengthMap[length] || "approx 200 words"}.
 
 IMPORTANT: Return ONLY valid JSON with the following structure:
 {
-  "title": "The German Title",
-  "content": "The German story text..."
+  "title": "The Title",
+  "content": "The story text..."
 }
 Do not include markdown formatting (like \`\`\`json) in the response. Just the raw JSON string.
 `;
@@ -151,9 +151,9 @@ Do not include markdown formatting (like \`\`\`json) in the response. Just the r
     }
 };
 
-export const simplifyStory = async (text, level = "A2", model) => {
+export const simplifyStory = async (text, level = "A2", model, targetLanguage = "German") => {
     const systemPrompt = `
-You are a German language teacher.
+You are a ${targetLanguage} language teacher.
 Rewrite the following text to be suitable for a learner at the ${level} level.
 Keep the meaning of the story but use simpler vocabulary and grammar.
 IMPORTANT: Return ONLY the simplified text. Do not include any intro or outro.
@@ -188,21 +188,21 @@ IMPORTANT: Return ONLY the simplified text. Do not include any intro or outro.
 };
 
 
-export const generateFlashcards = async (topic, count = 10, level = "A2", model) => {
+export const generateFlashcards = async (topic, count = 10, level = "A2", model, targetLanguage = "German") => {
     const systemPrompt = `
-You are a German language teacher.
-Generate ${count} German vocabulary flashcards related to the topic "${topic}" for a learner at the ${level} level.
+You are a ${targetLanguage} language teacher.
+Generate ${count} ${targetLanguage} vocabulary flashcards related to the topic "${topic}" for a learner at the ${level} level.
 Each flashcard must include:
-- "word": The German word or phrase (with article if noun).
-- "definition": The English translation.
-- "context": A simple example sentence in German using the word.
-- "gender": "der", "die", "das", or null (if not a noun).
+- "word": The ${targetLanguage} word or phrase.
+- "definition": A simple definition or synonym (or English translation if appropriate).
+- "context": A simple example sentence in ${targetLanguage} using the word.
+- "gender": null (or gender if applicable for the language).
 
 IMPORTANT: Return ONLY a valid JSON array of objects.
 Example:
 [
-  { "word": "der Apfel", "definition": "the apple", "context": "Ich esse einen Apfel.", "gender": "der" },
-  { "word": "laufen", "definition": "to run", "context": "Er läuft schnell.", "gender": null }
+  { "word": "word1", "definition": "definition1", "context": "example sentence 1", "gender": null },
+  { "word": "word2", "definition": "definition2", "context": "example sentence 2", "gender": null }
 ]
 Do not include any markdown formatting like \`\`\`json. Just the raw JSON array.
 `;
@@ -264,10 +264,10 @@ Do not include any markdown formatting like \`\`\`json. Just the raw JSON array.
     }
 };
 
-export const generateRolePlayResponse = async (messages, scenario, model) => {
+export const generateRolePlayResponse = async (messages, scenario, model, targetLanguage = "German") => {
     const systemPrompt = `
-You are a helpful German tutor role-playing as a character in a "${scenario}" scenario.
-Your goal is to help the user practice German conversation.
+You are a helpful ${targetLanguage} tutor role-playing as a character in a "${scenario}" scenario.
+Your goal is to help the user practice ${targetLanguage} conversation.
 Keep your responses natural, relatively short (1-3 sentences), and suitable for a learner.
 If the user makes a mistake, you can subtly correct them in your response or just continue the conversation naturally if it's understandable.
 Do NOT break character.
@@ -302,13 +302,13 @@ Do NOT break character.
     }
 };
 
-export const generateHint = async (messages, scenario, model) => {
+export const generateHint = async (messages, scenario, model, targetLanguage = "German") => {
     const systemPrompt = `
-You are a German language helper. The user is in a role-play scenario: "${scenario}".
+You are a ${targetLanguage} language helper. The user is in a role-play scenario: "${scenario}".
 The user is stuck and needs a hint on what to say next.
-Read the conversation history and suggest 3 possible German responses the user could say.
+Read the conversation history and suggest 3 possible ${targetLanguage} responses the user could say.
 Return ONLY a valid JSON array of strings.
-Example: ["Ich möchte bezahlen, bitte.", "Haben Sie das in Rot?", "Danke, auf Wiedersehen."]
+Example: ["Response 1", "Response 2", "Response 3"]
 `;
 
     const conversation = [
@@ -348,10 +348,10 @@ Example: ["Ich möchte bezahlen, bitte.", "Haben Sie das in Rot?", "Danke, auf W
     }
 };
 
-export const analyzeWriting = async (text, model) => {
+export const analyzeWriting = async (text, model, targetLanguage = "German") => {
     const systemPrompt = `
-You are a German language teacher correcting a student's writing.
-Analyze the provided German text.
+You are a ${targetLanguage} language teacher correcting a student's writing.
+Analyze the provided ${targetLanguage} text.
 Return ONLY a valid JSON object with the following structure:
 {
   "correctedText": "The full text with all grammar and spelling errors fixed.",
@@ -401,6 +401,82 @@ Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
 
     } catch (error) {
         console.error('Error analyzing writing:', error);
+        throw error;
+    }
+};
+
+export const adaptContent = async (text, level, model, targetLanguage = "German") => {
+    const systemPrompt = `
+You are an expert ${targetLanguage} language teacher and editor.
+Your task is to adapt the provided text for a learner at the ${level} level.
+
+RULES:
+1. **Language**: The output MUST be in ${targetLanguage}.
+2. **Content**: 
+   - Adapt the text to ${level} level.
+   - Maintain the original meaning and flow.
+   - IGNORE all metadata, copyright notices, headers, footers.
+3. **Difficulty**: Adapt the vocabulary and grammar strictly to CEFR level ${level}.
+4. **Output Format**: You MUST return a valid JSON object with EXACTLY these two fields:
+   - "reasoning": A brief explanation (in English) of what you changed.
+   - "adapted_text": The final adapted ${targetLanguage} text.
+
+Example JSON:
+{
+  "reasoning": "Simplified vocabulary and sentence structure for A2 level.",
+  "adapted_text": "Adapted text in ${targetLanguage}..."
+}
+Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
+`;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: text }
+                ],
+                stream: false,
+                format: "json", // Enforce JSON mode
+                options: {
+                    temperature: 0.3
+                }
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to adapt content');
+        }
+
+        const data = await response.json();
+        let content = data.message?.content;
+
+        try {
+            // Cleanup markdown if present
+            content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            // Parse the JSON response
+            const parsed = JSON.parse(content);
+
+            // Handle potential schema mismatch (fallback if model returns "content" instead of "adapted_text")
+            const adaptedText = parsed.adapted_text || parsed.content || parsed.text || content;
+            const reasoning = parsed.reasoning || "No reasoning provided.";
+
+            return {
+                content: adaptedText,
+                reasoning: reasoning
+            };
+        } catch (e) {
+            console.warn("Failed to parse JSON response from LLM, using raw content", e);
+            // If parsing fails, return the raw content but try to strip JSON syntax if it looks like a failed JSON dump
+            return { content: content, reasoning: "Failed to parse reasoning." };
+        }
+
+    } catch (error) {
+        console.error('Error adapting content:', error);
         throw error;
     }
 };
