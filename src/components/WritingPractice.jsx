@@ -158,7 +158,7 @@ export default function WritingPractice({ savedVocab, onSave }) {
                             <select
                                 value={provider}
                                 onChange={(e) => setProvider(e.target.value)}
-                                className="text-sm border border-slate-200 rounded-lg px-2 outline-none"
+                                className="text-sm border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg px-2 outline-none"
                             >
                                 <option value="gemini">Gemini</option>
                                 <option value="ollama">Ollama</option>
@@ -168,7 +168,7 @@ export default function WritingPractice({ savedVocab, onSave }) {
                                 <select
                                     value={selectedOllamaModel}
                                     onChange={(e) => setSelectedOllamaModel(e.target.value)}
-                                    className="text-sm border border-slate-200 rounded-lg px-2 outline-none max-w-[100px]"
+                                    className="text-sm border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-lg px-2 outline-none max-w-[100px]"
                                 >
                                     {ollamaModels.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}
                                 </select>

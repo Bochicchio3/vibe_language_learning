@@ -54,7 +54,7 @@ export default function ReadingGoals({ goals, todayProgress, weekProgress, onUpd
     const weeklyPercent = getWeeklyProgressPercent();
 
     return (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <Target className="text-indigo-600" />

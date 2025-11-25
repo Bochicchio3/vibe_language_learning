@@ -50,7 +50,7 @@ export default function StreakTracker({ streak, sessions, goals }) {
     const last30Days = getLast30Days();
 
     return (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 mb-6">
                 <Flame className="text-orange-500" />
                 Reading Streak

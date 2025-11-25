@@ -63,10 +63,10 @@ export default function ReadingHeatmap({ sessions }) {
     const weeks = groupByWeek(heatmapData);
 
     return (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700">
             <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <Calendar className="text-indigo-600" />
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <Calendar className="text-indigo-600 dark:text-indigo-400" />
                     Activity Heatmap
                 </h3>
 
@@ -74,7 +74,7 @@ export default function ReadingHeatmap({ sessions }) {
                 <select
                     value={selectedCategory || 'all'}
                     onChange={(e) => setSelectedCategory(e.target.value === 'all' ? null : e.target.value)}
-                    className="px-3 py-1.5 text-sm bg-slate-50 border-none rounded-lg text-slate-700 focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer"
+                    className="px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-700 border-none rounded-lg text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 outline-none cursor-pointer"
                 >
                     <option value="all">All Activities</option>
                     {Object.entries(CATEGORY_META).map(([key, meta]) => (
@@ -127,10 +127,10 @@ export default function ReadingHeatmap({ sessions }) {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100">
-                <div className="text-xs text-slate-500">Last 6 months</div>
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
+                <div className="text-xs text-slate-500 dark:text-slate-400">Last 6 months</div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Less</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">Less</span>
                     <div className="flex gap-1">
                         <div className="w-3 h-3 bg-slate-100 rounded-sm"></div>
                         <div className="w-3 h-3 bg-emerald-200 rounded-sm"></div>
@@ -138,7 +138,7 @@ export default function ReadingHeatmap({ sessions }) {
                         <div className="w-3 h-3 bg-emerald-600 rounded-sm"></div>
                         <div className="w-3 h-3 bg-emerald-700 rounded-sm"></div>
                     </div>
-                    <span className="text-xs text-slate-500">More</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">More</span>
                 </div>
             </div>
         </div>

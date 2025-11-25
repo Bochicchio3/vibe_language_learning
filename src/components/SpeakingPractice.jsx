@@ -577,7 +577,7 @@ const SpeakingPractice = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
                             <label className="block text-sm font-medium text-slate-700 mb-2">AI Model</label>
                             <select
                                 value={selectedModel}
@@ -626,7 +626,7 @@ const SpeakingPractice = () => {
                                             )}
                                             <div className={`max-w-[80%] p-3 rounded-2xl ${msg.role === 'user'
                                                 ? 'bg-indigo-600 text-white rounded-br-none'
-                                                : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'
+                                                : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm'
                                                 }`}>
                                                 {msg.content}
                                                 {msg.role === 'assistant' && (
@@ -646,7 +646,7 @@ const SpeakingPractice = () => {
                                             <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                                                 <Bot size={18} className="text-indigo-600" />
                                             </div>
-                                            <div className="bg-white border border-slate-200 p-3 rounded-2xl rounded-bl-none shadow-sm">
+                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 rounded-2xl rounded-bl-none shadow-sm">
                                                 <Loader2 size={16} className="animate-spin text-indigo-600" />
                                             </div>
                                         </div>
@@ -667,7 +667,7 @@ const SpeakingPractice = () => {
                                         <button
                                             key={idx}
                                             onClick={() => setCurrentInput(hint)}
-                                            className="text-xs bg-white border border-yellow-200 text-slate-700 px-3 py-1.5 rounded-full hover:bg-yellow-100 transition"
+                                            className="text-xs bg-white dark:bg-slate-800 border border-yellow-200 dark:border-yellow-600 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-900 transition"
                                         >
                                             {hint}
                                         </button>
@@ -677,7 +677,7 @@ const SpeakingPractice = () => {
                         )}
 
                         {/* Input Area */}
-                        <div className="p-4 bg-white border-t border-slate-200">
+                        <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                             <div className="flex gap-2 items-end">
                                 <button
                                     onMouseDown={startRecording}

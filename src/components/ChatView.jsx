@@ -273,11 +273,11 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
     };
 
     return (
-        <div className={`${isWidget ? 'h-full rounded-none' : 'max-w-6xl mx-auto shadow-sm rounded-xl h-[calc(100vh-140px)] md:h-[calc(100vh-100px)]'} bg-white overflow-hidden flex`}>
+        <div className={`${isWidget ? 'h-full rounded-none' : 'max-w-6xl mx-auto shadow-sm rounded-xl h-[calc(100vh-140px)] md:h-[calc(100vh-100px)]'} bg-white dark:bg-slate-900 overflow-hidden flex`}>
             {/* Sidebar - Hidden on small widgets/mobile unless toggled (simplified for now: always show on desktop, hide on widget) */}
             {!isWidget && (
-                <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col hidden md:flex">
-                    <div className="p-4 border-b border-slate-200">
+                <div className="w-64 bg-slate-50 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col hidden md:flex">
+                    <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                         <button
                             onClick={createNewChat}
                             className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
@@ -290,9 +290,9 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                             <div
                                 key={conv.id}
                                 onClick={() => setActiveConversationId(conv.id)}
-                                className={`p-3 rounded-lg cursor-pointer flex justify-between items-center group ${activeConversationId === conv.id ? 'bg-white shadow-sm border border-slate-200' : 'hover:bg-slate-100'}`}
+                                className={`p-3 rounded-lg cursor-pointer flex justify-between items-center group ${activeConversationId === conv.id ? 'bg-white dark:bg-slate-700 shadow-sm border border-slate-200 dark:border-slate-600' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`}
                             >
-                                <div className="truncate text-sm font-medium text-slate-700 flex-grow">
+                                <div className="truncate text-sm font-medium text-slate-700 dark:text-slate-300 flex-grow">
                                     {conv.title}
                                 </div>
                                 <button
@@ -310,15 +310,15 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
             {/* Main Chat Area */}
             <div className="flex-grow flex flex-col h-full">
                 {/* Header */}
-                <div className="bg-slate-50 border-b border-slate-200 p-4 flex justify-between items-center">
+                <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         {isWidget && (
-                            <button onClick={createNewChat} className="p-1 hover:bg-slate-200 rounded text-slate-500" title="New Chat">
+                            <button onClick={createNewChat} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 dark:text-slate-400" title="New Chat">
                                 <MessageCircle size={18} />
                             </button>
                         )}
-                        <Bot className="text-indigo-600" />
-                        <h2 className="text-xl font-bold text-slate-800">
+                        <Bot className="text-indigo-600 dark:text-indigo-400" />
+                        <h2 className="text-xl font-bold text-slate-800 dark:text-white">
                             {isWidget ? 'AI Chat' : (conversations.find(c => c.id === activeConversationId)?.title || 'AI Chat')}
                         </h2>
                     </div>
@@ -347,9 +347,9 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                 </div>
 
                 {/* Messages */}
-                <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+                <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-900/50">
                     {messages.length === 0 && !isStreaming ? (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500">
                             <MessageCircle size={48} className="mb-4 opacity-50" />
                             <p className="text-lg font-medium">Start a conversation</p>
                             <p className="text-sm">Select a model and say hello!</p>
@@ -363,7 +363,7 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                                             <Bot size={18} className="text-indigo-600" />
                                         </div>
                                     )}
-                                    <div className={`max-w-[80%] p-4 rounded-2xl whitespace-pre-wrap ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm'}`}>
+                                    <div className={`max-w-[80%] p-4 rounded-2xl whitespace-pre-wrap ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm'}`}>
                                         {msg.content}
                                     </div>
                                     {msg.role === 'user' && (
@@ -378,7 +378,7 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                                     <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                                         <Bot size={18} className="text-indigo-600" />
                                     </div>
-                                    <div className="max-w-[80%] p-4 rounded-2xl whitespace-pre-wrap bg-white border border-slate-200 text-slate-800 rounded-bl-none shadow-sm">
+                                    <div className="max-w-[80%] p-4 rounded-2xl whitespace-pre-wrap bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-bl-none shadow-sm">
                                         {streamingMessage}
                                         <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
                                     </div>
@@ -390,14 +390,14 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                 </div>
 
                 {/* Input */}
-                <div className="p-4 bg-white border-t border-slate-200">
+                <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
                     <form onSubmit={handleSubmit} className="flex gap-2">
                         <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Type your message..."
-                            className="flex-grow p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                            className="flex-grow p-3 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                             disabled={isLoading && !isStreaming}
                         />
                         <button
