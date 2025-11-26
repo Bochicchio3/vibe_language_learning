@@ -97,5 +97,26 @@ export function useVocab() {
         }
     };
 
-    return { savedVocab, toggleWord, updateDefinition, deleteWord, translatingWord };
+    const deleteVocabForText = async (textId) => {
+        if (!currentUser || !textId) return 0;
+
+        // Find all words associated with this text
+        const wordsToDelete = Object.entries(savedVocab)
+            .filter(([_, data]) => data.sourceTextId === textId)
+            .map(([word, _]) => word);
+
+        if (wordsToDelete.length === 0) return 0;
+
+        // Delete each word
+        // Note: Firestore batch limit is 500. If we expect more, we should chunk this.
+        // For now, simple parallel promises or sequential is fine for typical vocab size per text.
+        const promises = wordsToDelete.map(word =>
+            deleteDoc(doc(db, 'users', currentUser.uid, 'vocab', word))
+        );
+
+        await Promise.all(promises);
+        return wordsToDelete.length;
+    };
+
+    return { savedVocab, toggleWord, updateDefinition, deleteWord, deleteVocabForText, translatingWord };
 }

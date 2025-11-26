@@ -23,6 +23,7 @@ import {
     Brain
 } from 'lucide-react';
 import NewsModal from './library/NewsModal';
+import ConfirmationModal from './ConfirmationModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useVocab } from '../hooks/useVocab';
 import { useLibrary } from '../hooks/useLibrary';
@@ -44,7 +45,7 @@ import {
 export default function LibraryView() {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
-    const { savedVocab } = useVocab();
+    const { savedVocab, deleteVocabForText } = useVocab();
     const { saveText, deleteText, toggleReadStatus } = useLibrary();
 
     // Local state for admin (could be moved to context)
@@ -97,19 +98,40 @@ export default function LibraryView() {
 
     // --- ACTIONS ---
 
-    const handleDelete = async (textId) => {
-        if (!currentUser) return;
-        if (!window.confirm('Are you sure you want to delete this text?')) return;
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, textId: null, vocabCount: 0 });
+
+    const initiateDelete = (e, textId) => {
+        e.stopPropagation();
+        const vocabCount = getVocabCount(textId);
+        setDeleteModal({ isOpen: true, textId, vocabCount });
+    };
+
+    const confirmDelete = async () => {
+        const { textId, vocabCount } = deleteModal;
+        if (!textId || !currentUser) return;
 
         try {
             if (activeTab === 'private') {
+                // Delete associated vocab first
+                if (vocabCount > 0) {
+                    try {
+                        await deleteVocabForText(textId);
+                    } catch (vocabError) {
+                        console.error("Failed to delete vocab:", vocabError);
+                        alert("Failed to delete associated vocabulary. Stopping delete.");
+                        return;
+                    }
+                }
+
                 await deleteText(textId);
             } else if (isAdmin) {
                 await deleteDoc(doc(db, 'texts', textId));
             }
         } catch (error) {
             console.error("Error deleting text:", error);
-            alert("Failed to delete text.");
+            alert("Failed to delete text: " + error.message);
+        } finally {
+            setDeleteModal({ isOpen: false, textId: null, vocabCount: 0 });
         }
     };
 
@@ -576,10 +598,7 @@ export default function LibraryView() {
                                                         {text.isRead ? <CheckCircle size={16} className="md:w-[18px] md:h-[18px]" /> : <Circle size={16} className="md:w-[18px] md:h-[18px]" />}
                                                     </button>
                                                     <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDelete(text.id);
-                                                        }}
+                                                        onClick={(e) => initiateDelete(e, text.id)}
                                                         className="p-1.5 md:p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"
                                                         title="Delete Text"
                                                     >
@@ -591,14 +610,11 @@ export default function LibraryView() {
                                             {/* Admin Delete for Public */}
                                             {activeTab === 'public' && isAdmin && (
                                                 <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(text.id);
-                                                    }}
-                                                    className="p-1.5 md:p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition"
-                                                    title="Delete Public Text"
+                                                    onClick={(e) => initiateDelete(e, text.id)}
+                                                    className="bg-white dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 dark:hover:text-red-400 py-2 px-3 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-900 transition flex items-center justify-center"
+                                                    title="Delete Text"
                                                 >
-                                                    <Trash2 size={16} className="md:w-[18px] md:h-[18px]" />
+                                                    <Trash2 size={18} />
                                                 </button>
                                             )}
                                         </div>
@@ -639,6 +655,21 @@ export default function LibraryView() {
                 </div>
             )}
 
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                onConfirm={confirmDelete}
+                title="Delete Text"
+                message={deleteModal.vocabCount > 0
+                    ? `Are you sure you want to delete this text?\n\nWARNING: This text has ${deleteModal.vocabCount} saved words associated with it. If you delete this text, those words will also be deleted from your vocabulary list.`
+                    : "Are you sure you want to delete this text?"
+                }
+                confirmText="Delete"
+                isDangerous={true}
+            />
+
+            {/* News Modal */}
             {showNewsModal && (
                 <NewsModal
                     onClose={() => setShowNewsModal(false)}

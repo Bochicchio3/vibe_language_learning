@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Book, CheckCircle, Lock, Unlock, PlayCircle, RotateCcw, Plus, Upload, X, Loader2, Sparkles, Globe, User, Shield, Share2, Download, Search, Filter, Wand2 } from 'lucide-react';
-import { collection, getDocs, setDoc, doc, query, orderBy, serverTimestamp, addDoc, updateDoc, where } from 'firebase/firestore';
+import { Book, CheckCircle, Lock, Unlock, PlayCircle, RotateCcw, Plus, Upload, X, Loader2, Sparkles, Globe, User, Shield, Share2, Download, Search, Filter, Wand2, Trash2 } from 'lucide-react';
+import { collection, getDocs, setDoc, doc, query, orderBy, serverTimestamp, addDoc, updateDoc, where, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useImporter } from '../hooks/useImporter';
+import { useVocab } from '../hooks/useVocab';
+import ConfirmationModal from './ConfirmationModal';
 
 import { extractTextFromPDF, chunkText } from '../services/pdfProcessor';
 import { fetchModels, detectLevel } from '../services/ollama';
@@ -13,6 +15,7 @@ export default function BooksView() {
     const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { startBackgroundImport } = useImporter();
+    const { savedVocab, deleteVocabForText } = useVocab();
 
     const [privateBooks, setPrivateBooks] = useState([]);
     const [publicBooks, setPublicBooks] = useState([]);
@@ -198,6 +201,42 @@ export default function BooksView() {
             fetchBooks();
         } catch (error) {
             console.error("Error rejecting book:", error);
+        }
+    };
+
+    const [deleteModal, setDeleteModal] = useState({ isOpen: false, bookId: null, vocabCount: 0 });
+
+    const initiateDeleteBook = (e, bookId) => {
+        e.stopPropagation();
+        const wordsToDelete = Object.values(savedVocab).filter(word => word.sourceTextId === bookId);
+        setDeleteModal({ isOpen: true, bookId, vocabCount: wordsToDelete.length });
+    };
+
+    const confirmDeleteBook = async () => {
+        const { bookId, vocabCount } = deleteModal;
+        if (!bookId || !currentUser) return;
+
+        try {
+            // Delete associated vocab first
+            if (vocabCount > 0) {
+                try {
+                    await deleteVocabForText(bookId);
+                } catch (vocabError) {
+                    console.error("Failed to delete vocab:", vocabError);
+                    alert("Failed to delete associated vocabulary. Stopping delete.");
+                    return;
+                }
+            }
+
+            // Delete the book
+            await deleteDoc(doc(db, 'users', currentUser.uid, 'books', bookId));
+
+            fetchBooks();
+        } catch (error) {
+            console.error("Error deleting book:", error);
+            alert("Failed to delete book: " + error.message);
+        } finally {
+            setDeleteModal({ isOpen: false, bookId: null, vocabCount: 0 });
         }
     };
 
@@ -513,12 +552,21 @@ export default function BooksView() {
 
                                     {/* Secondary Action: Share (Private Only) */}
                                     {activeTab === 'private' && (
-                                        <button
-                                            onClick={() => handlePushToPublic(book)}
-                                            className="w-full bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium py-2 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition flex items-center justify-center gap-2"
-                                        >
-                                            <Share2 size={16} /> Share to Public
-                                        </button>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handlePushToPublic(book)}
+                                                className="flex-1 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium py-2 rounded-lg border border-transparent hover:border-slate-200 dark:hover:border-slate-600 transition flex items-center justify-center gap-2"
+                                            >
+                                                <Share2 size={16} /> Share
+                                            </button>
+                                            <button
+                                                onClick={(e) => initiateDeleteBook(e, book.id)}
+                                                className="bg-white dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 dark:hover:text-red-400 py-2 px-3 rounded-lg border border-transparent hover:border-red-100 dark:hover:border-red-900 transition flex items-center justify-center"
+                                                title="Delete Book"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -527,7 +575,21 @@ export default function BooksView() {
                 </div>
             )}
 
-            {/* Add Book Modal */}
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={deleteModal.isOpen}
+                onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                onConfirm={confirmDeleteBook}
+                title="Delete Book"
+                message={deleteModal.vocabCount > 0
+                    ? `Are you sure you want to delete this book?\n\nWARNING: This book has ${deleteModal.vocabCount} saved words associated with it. If you delete this book, those words will also be deleted from your vocabulary list.`
+                    : "Are you sure you want to delete this book?"
+                }
+                confirmText="Delete"
+                isDangerous={true}
+            />
+
+            {/* Upload Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
