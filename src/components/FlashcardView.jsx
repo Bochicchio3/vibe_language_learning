@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Brain, CheckCircle, RefreshCw, Plus, Sparkles, X, Loader2, Library, Layers, Trash2, GraduationCap } from 'lucide-react';
 import { collection, getDocs, doc, setDoc, serverTimestamp, writeBatch, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -8,8 +9,13 @@ import Flashcard from './Flashcard';
 import { recordVocabSession } from '../services/activityTracker';
 import { generateFlashcards } from '../services/ollama';
 
-export default function FlashcardView({ initialDeck = null }) {
+export default function FlashcardView({ initialDeck: propInitialDeck = null }) {
     const { currentUser } = useAuth();
+    const location = useLocation();
+
+    // Get initialDeck from either props or router state
+    const initialDeck = propInitialDeck || location.state?.initialDeck;
+
     const [allVocab, setAllVocab] = useState([]); // Store all vocab to derive decks
     const [dueCards, setDueCards] = useState([]);
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -72,7 +78,7 @@ export default function FlashcardView({ initialDeck = null }) {
             // If a deck is already selected (or passed as initial prop), filter for it.
             const targetDeck = selectedDeck || initialDeck;
             if (targetDeck) {
-                startSession(targetDeck);
+                startSession(targetDeck, vocabList);
             } else {
                 // Optional: Auto-select 'General' if it's the only one? No, show library.
             }
@@ -84,10 +90,12 @@ export default function FlashcardView({ initialDeck = null }) {
         }
     };
 
-    const startSession = (deckInput) => {
+    const startSession = (deckInput, vocabList = null) => {
         setSelectedDeck(deckInput);
 
-        let filtered = allVocab;
+        // Use provided vocabList or fall back to state (for when called from UI)
+        const vocab = vocabList || allVocab;
+        let filtered = vocab;
 
         // Handle object-based deck (from Library with content)
         if (typeof deckInput === 'object' && deckInput !== null && deckInput.content) {
@@ -100,12 +108,18 @@ export default function FlashcardView({ initialDeck = null }) {
                     .filter(w => w.length > 0)
             );
 
-            filtered = allVocab.filter(word => contentWords.has(word.id.toLowerCase()));
-            console.log(`[FlashcardView] Filtered ${filtered.length} words from story content`);
+            // Filter vocab words that match words in the content
+            // Check both the document ID and the sourceTextId to ensure we get words from this story
+            filtered = vocab.filter(word => {
+                // Match if this word appears in the content
+                const wordText = (word.id || '').toLowerCase();
+                return contentWords.has(wordText) && word.sourceTextId === deckInput.id;
+            });
+            console.log(`[FlashcardView] Filtered ${filtered.length} words from story "${deckInput.title}"`);
         }
         // Handle string-based deck (standard)
         else if (deckInput !== 'All') {
-            filtered = allVocab.filter(word => (word.deck || 'General') === deckInput);
+            filtered = vocab.filter(word => (word.deck || 'General') === deckInput);
         }
 
         // Filter out learned words from review

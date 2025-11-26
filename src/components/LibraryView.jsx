@@ -23,6 +23,7 @@ import {
     Brain
 } from 'lucide-react';
 import NewsModal from './library/NewsModal';
+import StoryGeneratorModal from './library/StoryGeneratorModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useVocab } from '../hooks/useVocab';
 import { useLibrary } from '../hooks/useLibrary';
@@ -54,6 +55,8 @@ export default function LibraryView() {
     const [selectedLevels, setSelectedLevels] = useState([]);
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [showNewsModal, setShowNewsModal] = useState(false);
+    const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+    const [generatorInitialTopic, setGeneratorInitialTopic] = useState('');
 
     // Public/Private State
     const [activeTab, setActiveTab] = useState('private'); // 'private' | 'public'
@@ -209,17 +212,20 @@ export default function LibraryView() {
         return Object.values(savedVocab).filter(word => word.sourceTextId === textId).length;
     };
 
-    const getDifficultyColor = (percent, isRead) => {
-        if (!isRead) return 'border-slate-200'; // Default for unread
-        if (percent === 0) return 'border-amber-400 bg-amber-50'; // Completed (Gold)
-        if (percent < 5) return 'border-green-400 bg-green-50'; // Easy
-        if (percent < 15) return 'border-yellow-400 bg-yellow-50'; // Medium
-        return 'border-red-400 bg-red-50'; // Hard
+    const getDifficultyColor = (percent, isRead, unknownCount) => {
+        // Only show colored border if user has saved words from this story
+        if (unknownCount === 0) return 'border-slate-200 dark:border-slate-700';
+        if (percent === 0 && isRead) return 'border-amber-400 bg-amber-50 dark:bg-amber-950/20'; // Mastered
+        if (percent < 5) return 'border-green-400 bg-green-50 dark:bg-green-950/20'; // Easy
+        if (percent < 15) return 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20'; // Medium
+        return 'border-red-400 bg-red-50 dark:bg-red-950/20'; // Hard
     };
 
-    const getDifficultyBadge = (percent, isRead) => {
-        if (!isRead) return null;
-        if (percent === 0) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">MASTERED</span>;
+    const getDifficultyBadge = (percent, isRead, unknownCount) => {
+        // Show badge if user has saved words from this story
+        if (unknownCount === 0) return null;
+        // Show MASTERED only if completed AND all words learned
+        if (percent === 0 && isRead) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">MASTERED</span>;
         if (percent < 5) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">EASY</span>;
         if (percent < 15) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">MEDIUM</span>;
         return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">HARD</span>;
@@ -259,10 +265,8 @@ export default function LibraryView() {
 
         const handleSubmit = (e) => {
             e.preventDefault();
-            if (topic) {
-                localStorage.setItem('generatorTopic', topic);
-            }
-            navigate('/generator');
+            setGeneratorInitialTopic(topic);
+            setShowGeneratorModal(true);
         };
 
         return (
@@ -338,18 +342,25 @@ export default function LibraryView() {
             // Status Filter (Multi-select)
             let matchesStatus = true;
             if (selectedStatuses.length > 0) {
-                const isUnread = !text.isRead;
+                const isActive = !text.isRead;
                 const isCompleted = text.isRead && stats.unknownPercent === 0;
                 const isInProgress = text.isRead && stats.unknownPercent > 0;
                 const isPending = text.status === 'pending';
 
                 matchesStatus = selectedStatuses.some(status => {
-                    if (status === 'Unread') return isUnread;
+                    if (status === 'Active') return isActive;
                     if (status === 'Completed') return isCompleted;
                     if (status === 'In Progress') return isInProgress;
                     if (status === 'Pending') return isPending;
                     return false;
                 });
+            }
+
+            // Hide completed stories by default UNLESS Completed status filter is selected
+            if (selectedStatuses.length === 0 || !selectedStatuses.includes('Completed')) {
+                if (text.isRead) {
+                    return false;
+                }
             }
 
             return matchesSearch && matchesLevel && matchesStatus;
@@ -437,7 +448,7 @@ export default function LibraryView() {
                     {/* Status Filter */}
                     <div className="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 no-scrollbar border-l pl-4 border-slate-100">
                         <span className="text-sm font-medium text-slate-400 flex items-center mr-2">Status:</span>
-                        {['All', 'Unread', 'In Progress', 'Completed', ...(activeTab === 'public' && isAdmin ? ['Pending'] : [])].map(status => {
+                        {['All', 'Active', 'In Progress', 'Completed', ...(activeTab === 'public' && isAdmin ? ['Pending'] : [])].map(status => {
                             const isSelected = status === 'All' ? selectedStatuses.length === 0 : selectedStatuses.includes(status);
                             return (
                                 <button
@@ -474,7 +485,7 @@ export default function LibraryView() {
 
                     {filteredTexts.map(text => {
                         const stats = getTextStats(text);
-                        const difficultyColor = getDifficultyColor(stats.unknownPercent, text.isRead);
+                        const difficultyColor = getDifficultyColor(stats.unknownPercent, text.isRead, stats.unknownCount);
                         const isPending = text.status === 'pending';
 
                         return (
@@ -492,7 +503,7 @@ export default function LibraryView() {
                                             <span className="px-2 py-0.5 md:px-2.5 md:py-1 rounded-md text-[10px] md:text-xs font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
                                                 {text.level}
                                             </span>
-                                            {getDifficultyBadge(stats.unknownPercent, text.isRead)}
+                                            {getDifficultyBadge(stats.unknownPercent, text.isRead, stats.unknownCount)}
                                             {isPending && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">PENDING</span>}
                                         </div>
 
@@ -548,12 +559,12 @@ export default function LibraryView() {
                                             {/* Private Actions */}
                                             {activeTab === 'private' && (
                                                 <>
-                                                    {/* Flashcard Button - only show for read stories with vocab */}
-                                                    {text.isRead && stats.unknownCount > 0 && (
+                                                    {/* Flashcard Button - show if user has saved words from this story */}
+                                                    {stats.unknownCount > 0 && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                navigate('/flashcards', { state: { initialDeck: { id: text.title, title: text.title, content: text.content } } });
+                                                                navigate('/flashcards', { state: { initialDeck: { id: text.id, title: text.title, content: text.content } } });
                                                             }}
                                                             className="flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition text-[10px] md:text-xs font-bold"
                                                             title={`Practice ${stats.unknownCount} words from this story`}
@@ -568,10 +579,10 @@ export default function LibraryView() {
                                                             handleToggleRead(text.id, !text.isRead);
                                                         }}
                                                         className={`p-1.5 md:p-2 rounded-full transition ${text.isRead
-                                                            ? 'text-green-500 bg-green-50 hover:bg-green-100'
-                                                            : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'
+                                                            ? 'text-green-500 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50'
+                                                            : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                                             }`}
-                                                        title={text.isRead ? "Mark as Unread" : "Mark as Read"}
+                                                        title={text.isRead ? "Mark as Incomplete" : "Mark as Complete"}
                                                     >
                                                         {text.isRead ? <CheckCircle size={16} className="md:w-[18px] md:h-[18px]" /> : <Circle size={16} className="md:w-[18px] md:h-[18px]" />}
                                                     </button>
@@ -643,6 +654,16 @@ export default function LibraryView() {
                 <NewsModal
                     onClose={() => setShowNewsModal(false)}
                     onSaveText={saveText}
+                />
+            )}
+
+            {showGeneratorModal && (
+                <StoryGeneratorModal
+                    onClose={() => {
+                        setShowGeneratorModal(false);
+                        setGeneratorInitialTopic('');
+                    }}
+                    initialTopic={generatorInitialTopic}
                 />
             )}
         </div>
