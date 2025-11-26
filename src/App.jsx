@@ -102,7 +102,7 @@ function AuthenticatedApp() {
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
   const [translatingWord, setTranslatingWord] = useState(null); // Track which word is being translated
   const [isSyncing, setIsSyncing] = useState(false);
-  const { speak, stop, isPlaying, isLoading, isModelLoading, currentSentenceIndex, generatingSentences } = useTTS();
+  const { speak, stop, isPlaying, isLoading, isModelLoading, currentSentenceIndex, generatingSentences, selectedLanguage, setLanguage } = useTTS();
   const [chatWidgetOpen, setChatWidgetOpen] = useState(false);
   const [chatInitialMessage, setChatInitialMessage] = useState('');
   const { logout, currentUser } = useAuth();
@@ -531,7 +531,19 @@ function AuthenticatedApp() {
                 <Loader2 size={12} className="animate-spin" /> Loading Model...
               </span>
             )}
-
+            {/* Language Selector */}
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setLanguage(e.target.value)}
+              disabled={isModelLoading || isPlaying}
+              className="px-2 py-1 text-sm border border-slate-300 rounded-lg bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500 mr-2"
+              title="Select language"
+            >
+              <option value="de">🇩🇪 DE</option>
+              <option value="en">🇬🇧 EN</option>
+              <option value="es">🇪🇸 ES</option>
+              <option value="fr">🇫🇷 FR</option>
+            </select>
 
 
             <button

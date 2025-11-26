@@ -8,6 +8,9 @@ export const useTTS = () => {
     const [currentSentenceIndex, setCurrentSentenceIndex] = useState(-1);
     const [currentSentenceText, setCurrentSentenceText] = useState('');
     const [generatingSentences, setGeneratingSentences] = useState(new Set()); // Track which sentences are being generated
+    const [selectedLanguage, setSelectedLanguage] = useState(() => {
+        return localStorage.getItem('tts-language') || 'de';
+    });
 
     const workerRef = useRef(null);
     const audioContextRef = useRef(null);
@@ -29,7 +32,10 @@ export const useTTS = () => {
         workerRef.current.onmessage = (event) => {
             const { type, audio, sampling_rate, error, text, index, sessionId } = event.data;
 
-            if (type === 'init-start') {
+            if (type === 'runtime-ready') {
+                // Worker is ready, initialize TTS with current language
+                workerRef.current.postMessage({ type: 'init', language: selectedLanguage });
+            } else if (type === 'init-start') {
                 setIsModelLoading(true);
             } else if (type === 'init-complete') {
                 setIsModelLoading(false);
@@ -74,7 +80,14 @@ export const useTTS = () => {
                 }
             });
         };
-    }, []);
+    }, []); // Empty dependency array - worker is stable
+
+    // Handle language change
+    useEffect(() => {
+        if (workerRef.current) {
+            workerRef.current.postMessage({ type: 'init', language: selectedLanguage });
+        }
+    }, [selectedLanguage]);
 
     const playAudioChunk = (audioData, sampleRate, text, index) => {
         if (!audioContextRef.current) {
@@ -190,7 +203,7 @@ export const useTTS = () => {
         setIsLoading(true);
 
         // Split text into sentences
-        const segmenter = new Intl.Segmenter('de', { granularity: 'sentence' });
+        const segmenter = new Intl.Segmenter(selectedLanguage, { granularity: 'sentence' });
         const sentences = Array.from(segmenter.segment(text)).map((s, i) => ({
             text: s.segment,
             index: i
@@ -199,7 +212,7 @@ export const useTTS = () => {
         // Start from the requested index
         sentenceQueueRef.current = sentences.slice(startIndex);
         processNextSentence();
-    }, [isModelLoading, stop]);
+    }, [isModelLoading, stop, selectedLanguage]);
 
     const pause = useCallback(() => {
         if (audioContextRef.current) {
@@ -215,6 +228,14 @@ export const useTTS = () => {
         }
     }, []);
 
+    const setLanguage = useCallback((lang) => {
+        if (lang !== selectedLanguage) {
+            stop();
+            setSelectedLanguage(lang);
+            localStorage.setItem('tts-language', lang);
+        }
+    }, [selectedLanguage, stop]);
+
     return {
         speak,
         stop,
@@ -226,6 +247,8 @@ export const useTTS = () => {
         isModelLoading,
         currentSentenceIndex,
         currentSentenceText,
-        generatingSentences
+        generatingSentences,
+        selectedLanguage,
+        setLanguage
     };
 };

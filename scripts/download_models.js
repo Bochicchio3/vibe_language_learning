@@ -74,6 +74,9 @@ const downloadSherpaFiles = async () => {
         fs.mkdirSync(SHERPA_DIR, { recursive: true });
     }
 
+    // WASM files are now built locally using scripts/build_wasm.js
+    // We comment this out to prevent overwriting the custom build with the German-specific pre-built binaries
+    /*
     const files = [
         {
             url: 'https://huggingface.co/spaces/k2-fsa/web-assembly-tts-sherpa-onnx-de/resolve/main/sherpa-onnx-wasm-main-tts.js',
@@ -103,6 +106,8 @@ const downloadSherpaFiles = async () => {
         console.log(`Downloading ${file.name}...`);
         await downloadFile(file.url, dest);
     }
+    */
+    console.log('Skipping WASM download (using local build)...');
 };
 
 const downloadLanguageModel = async (langCode) => {
