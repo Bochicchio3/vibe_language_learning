@@ -174,9 +174,21 @@ const downloadLanguageModel = async (langCode) => {
     try {
         await downloadSherpaFiles();
 
-        // Download default language (German) by default
-        console.log('\nDownloading default language model (German)...');
-        await downloadLanguageModel('de');
+        // Check for language argument
+        const langArg = process.argv[2];
+        if (langArg) {
+            if (LANGUAGE_MODELS[langArg]) {
+                console.log(`\nDownloading requested language model (${LANGUAGE_MODELS[langArg].name})...`);
+                await downloadLanguageModel(langArg);
+            } else {
+                console.error(`\nUnknown language code: ${langArg}`);
+                console.log('Available languages:', Object.keys(LANGUAGE_MODELS).join(', '));
+            }
+        } else {
+            // Download default language (German) by default
+            console.log('\nDownloading default language model (German)...');
+            await downloadLanguageModel('de');
+        }
 
         console.log('\nAll downloads complete!');
         console.log('\nTo download additional languages, run:');
