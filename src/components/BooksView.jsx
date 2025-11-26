@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Book, CheckCircle, Lock, Unlock, PlayCircle, RotateCcw, Plus, Upload, X, Loader2, Sparkles, Globe, User, Shield, Share2, Download, Search, Filter, Wand2 } from 'lucide-react';
 import { collection, getDocs, setDoc, doc, query, orderBy, serverTimestamp, addDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { useImporter } from '../hooks/useImporter';
 import seedData from '../data/ein_neues_leben.json';
 import { extractTextFromPDF, chunkText } from '../services/pdfProcessor';
 import { fetchModels, detectLevel } from '../services/ollama';
 
-export default function BooksView({ setView, setActiveBook, onImportBook }) {
+export default function BooksView() {
+    const navigate = useNavigate();
+    const { currentUser } = useAuth();
+    const { startBackgroundImport } = useImporter();
+
     const [privateBooks, setPrivateBooks] = useState([]);
     const [publicBooks, setPublicBooks] = useState([]);
     const [pendingBooks, setPendingBooks] = useState([]);
@@ -44,8 +50,6 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
     const [previewText, setPreviewText] = useState('');
     const [showPreview, setShowPreview] = useState(false);
     const [isImageOnly, setIsImageOnly] = useState(false);
-
-    const { currentUser } = useAuth();
 
     useEffect(() => {
         fetchBooks();
@@ -118,7 +122,7 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
     };
 
     const handlePushToPublic = async (book) => {
-        if (!confirm(`Share "${book.title}" to the public library? It will require admin approval.`)) return;
+        if (!confirm(`Share "${book.title}" to the public library? It will be reviewed by an admin.`)) return;
 
         try {
             // Create a new document in the global 'books' collection
@@ -276,12 +280,16 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
         // Close modal immediately
         setShowAddModal(false);
 
-        // Trigger background import in App
-        if (onImportBook) {
-            onImportBook(title, level, bookChunks, shouldAdapt, selectedModel, targetLanguage);
+        // Trigger background import via hook
+        try {
+            await startBackgroundImport(title, level, bookChunks, shouldAdapt, selectedModel, targetLanguage, (newBook) => {
+                // Switch to private tab to see the new book coming in
+                setActiveTab('private');
+                fetchBooks(); // Refresh to see the new book
+            });
+        } catch (e) {
+            console.error("Import failed", e);
         }
-        // Switch to private tab to see the new book coming in
-        setActiveTab('private');
     };
 
     const toggleLevel = (l) => {
@@ -484,10 +492,7 @@ export default function BooksView({ setView, setActiveBook, onImportBook }) {
                                     {/* Primary Action */}
                                     {activeTab === 'private' ? (
                                         <button
-                                            onClick={() => {
-                                                setActiveBook(book);
-                                                setView('book_detail');
-                                            }}
+                                            onClick={() => navigate(`/book/${book.id}`)}
                                             className="w-full bg-slate-50 dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 font-medium py-2 rounded-lg border border-slate-200 dark:border-slate-600 hover:border-indigo-200 dark:hover:border-indigo-800 transition flex items-center justify-center gap-2"
                                         >
                                             <PlayCircle size={18} /> Start Reading

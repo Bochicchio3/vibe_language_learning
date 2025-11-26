@@ -20,8 +20,10 @@ import {
 import { isDue } from '../services/srs';
 import { generateWordDeepDive } from '../services/gemini';
 import { useTTS } from '../hooks/useTTS';
+import { useVocab } from '../hooks/useVocab';
 
-const VocabDashboard = ({ vocab, onUpdate, onDelete }) => {
+const VocabDashboard = () => {
+    const { savedVocab: vocab, deleteWord: onDelete, updateDefinition: onUpdate } = useVocab();
     const { speak } = useTTS();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all'); // all, due, learning, mastered

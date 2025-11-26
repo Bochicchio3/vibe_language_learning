@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     BookOpen,
     Plus,
@@ -23,6 +24,8 @@ import {
 } from 'lucide-react';
 import NewsModal from './library/NewsModal';
 import { useAuth } from '../contexts/AuthContext';
+import { useVocab } from '../hooks/useVocab';
+import { useLibrary } from '../hooks/useLibrary';
 import { db } from '../firebase';
 import {
     collection,
@@ -38,17 +41,15 @@ import {
     where
 } from 'firebase/firestore';
 
-export default function LibraryView({
-    savedVocab,
-    isAdmin,
-    setIsAdmin,
-    onSelect,
-    onAdd,
-    onGenerate,
-    onSaveText,
-    onStartFlashcards
-}) {
+export default function LibraryView() {
+    const navigate = useNavigate();
     const { currentUser } = useAuth();
+    const { savedVocab } = useVocab();
+    const { saveText, deleteText, toggleReadStatus } = useLibrary();
+
+    // Local state for admin (could be moved to context)
+    const [isAdmin, setIsAdmin] = useState(false);
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedLevels, setSelectedLevels] = useState([]);
     const [selectedStatuses, setSelectedStatuses] = useState([]);
@@ -102,7 +103,7 @@ export default function LibraryView({
 
         try {
             if (activeTab === 'private') {
-                await deleteDoc(doc(db, 'users', currentUser.uid, 'texts', textId));
+                await deleteText(textId);
             } else if (isAdmin) {
                 await deleteDoc(doc(db, 'texts', textId));
             }
@@ -114,13 +115,7 @@ export default function LibraryView({
 
     const handleToggleRead = async (textId, isRead) => {
         if (!currentUser || activeTab !== 'private') return;
-        try {
-            await updateDoc(doc(db, 'users', currentUser.uid, 'texts', textId), {
-                isRead: isRead
-            });
-        } catch (error) {
-            console.error("Error updating read status:", error);
-        }
+        await toggleReadStatus(textId, isRead);
     };
 
     const handleShareToPublic = async (text) => {
@@ -155,10 +150,6 @@ export default function LibraryView({
                 isRead: false,
                 originPublicId: text.id
             });
-
-            // Increment download count (optional)
-            // await updateDoc(doc(db, 'texts', text.id), { downloads: increment(1) });
-
             alert('Story added to your library!');
         } catch (error) {
             console.error("Error adding to library:", error);
@@ -181,13 +172,6 @@ export default function LibraryView({
         } catch (error) {
             console.error("Error rejecting:", error);
         }
-    };
-
-    const seedLibrary = async () => {
-        if (!currentUser) return;
-        // Sample texts logic can be moved here or imported
-        // For brevity, skipping re-implementation of seed unless requested
-        alert("Seed functionality moved to 'Add Text' -> 'Generate' for now.");
     };
 
     // --- HELPERS ---
@@ -270,14 +254,15 @@ export default function LibraryView({
     };
 
     // GenerateBox Component
-    const GenerateBox = ({ onGenerate }) => {
+    const GenerateBox = () => {
         const [topic, setTopic] = useState('');
 
         const handleSubmit = (e) => {
             e.preventDefault();
-            if (onGenerate) {
-                onGenerate(topic);
+            if (topic) {
+                localStorage.setItem('generatorTopic', topic);
             }
+            navigate('/generator');
         };
 
         return (
@@ -387,7 +372,7 @@ export default function LibraryView({
                         <Globe size={18} /> Daily News
                     </button>
                     <button
-                        onClick={onAdd}
+                        onClick={() => navigate('/import')}
                         className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition font-medium shadow-sm hover:shadow-md"
                     >
                         <Plus size={18} /> Add Text
@@ -485,7 +470,7 @@ export default function LibraryView({
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {/* Generate Box - First Item (Only in Private) */}
-                    {activeTab === 'private' && onGenerate && <GenerateBox onGenerate={onGenerate} />}
+                    {activeTab === 'private' && <GenerateBox />}
 
                     {filteredTexts.map(text => {
                         const stats = getTextStats(text);
@@ -495,7 +480,7 @@ export default function LibraryView({
                         return (
                             <div
                                 key={text.id}
-                                onClick={() => onSelect(text)}
+                                onClick={() => navigate(`/read/${text.id}`)}
                                 className={`group bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-sm border-2 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative overflow-hidden ${difficultyColor} ${isPending ? 'opacity-75 border-dashed' : ''}`}
                             >
                                 {/* Decorative Gradient Blob - Hidden on mobile */}
@@ -564,11 +549,11 @@ export default function LibraryView({
                                             {activeTab === 'private' && (
                                                 <>
                                                     {/* Flashcard Button - only show for read stories with vocab */}
-                                                    {text.isRead && stats.unknownCount > 0 && onStartFlashcards && (
+                                                    {text.isRead && stats.unknownCount > 0 && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                onStartFlashcards(text.title, text.content);
+                                                                navigate('/flashcards', { state: { initialDeck: { id: text.title, title: text.title, content: text.content } } });
                                                             }}
                                                             className="flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition text-[10px] md:text-xs font-bold"
                                                             title={`Practice ${stats.unknownCount} words from this story`}
@@ -657,7 +642,7 @@ export default function LibraryView({
             {showNewsModal && (
                 <NewsModal
                     onClose={() => setShowNewsModal(false)}
-                    onSaveText={onSaveText}
+                    onSaveText={saveText}
                 />
             )}
         </div>

@@ -9,7 +9,7 @@ self.Module = {
     onRuntimeInitialized: async () => {
         console.log('[Sherpa Worker] Runtime initialized');
         // Initialize TTS immediately after runtime is ready
-        initTTS();
+        await initTTS();
     },
     print: (text) => {
         console.log('[Sherpa WASM]', text);
@@ -23,7 +23,20 @@ self.Module = {
 importScripts('/wasm/sherpa/sherpa-onnx-wasm-main-tts.js');
 importScripts('/wasm/sherpa/sherpa-onnx-tts.js');
 
-function initTTS() {
+async function downloadAndWrite(url, path) {
+    console.log(`[Sherpa Worker] Downloading ${url}...`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to download ${url}: ${response.statusText}`);
+    const buffer = await response.arrayBuffer();
+
+    const fs = self.Module.FS || self.FS;
+    if (!fs) throw new Error('FS not found');
+
+    fs.writeFile(path, new Uint8Array(buffer));
+    console.log(`[Sherpa Worker] Wrote ${path} (${buffer.byteLength} bytes)`);
+}
+
+async function initTTS() {
     self.postMessage({ type: 'init-start' });
 
     if (!self.createOfflineTts) {
@@ -33,18 +46,20 @@ function initTTS() {
     }
 
     try {
+        console.log('[Sherpa Worker] Fetching model files...');
+
+        // Fetch and write model files to FS
+        await downloadAndWrite('/wasm/sherpa/models/de/model.onnx', '/model.onnx');
+        await downloadAndWrite('/wasm/sherpa/models/de/tokens.txt', '/tokens.txt');
+
         console.log('[Sherpa Worker] Creating TTS engine...');
 
-
-
-        // The model files are embedded in the .data file
-        // Based on the build script, they're renamed to generic names
         const config = {
             offlineTtsModelConfig: {
                 offlineTtsVitsModelConfig: {
-                    model: 'model.onnx',
-                    tokens: 'tokens.txt',
-                    dataDir: '/espeak-ng-data',
+                    model: '/model.onnx',
+                    tokens: '/tokens.txt',
+                    dataDir: '/espeak-ng-data', // This should still be in the .data file
                     noiseScale: 0.667,
                     noiseScaleW: 0.8,
                     lengthScale: 1.0,
@@ -64,8 +79,6 @@ function initTTS() {
         self.postMessage({ type: 'init-complete' });
     } catch (e) {
         console.error('[Sherpa Worker] Error initializing TTS:', e);
-        console.error('[Sherpa Worker] Error message:', e.message);
-        console.error('[Sherpa Worker] Error stack:', e.stack);
         self.postMessage({ type: 'error', error: e.message || String(e) });
     }
 }

@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Volume2, Brain, Loader2, CheckCircle, ArrowRight, MessageCircle, Sparkles, RotateCcw, BookOpen, GraduationCap, X, Play } from 'lucide-react';
-import { doc, updateDoc, arrayUnion, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, serverTimestamp, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { translateWord } from '../services/translation';
 import { simplifyStory, fetchModels, explainText } from '../services/ollama';
 import { useTTS } from '../hooks/useTTS';
 
-export default function ChapterReader({ chapter, book, setView, setChapter, setActiveBook, setChatWidgetOpen, setChatInitialMessage }) {
+export default function ChapterReader() {
+    const { bookId, chapterId } = useParams();
+    const navigate = useNavigate();
     const { currentUser } = useAuth();
     const { speak, stop, isPlaying, isLoading, isModelLoading, currentSentenceIndex } = useTTS();
+
+    const [book, setBook] = useState(null);
+    const [chapter, setChapter] = useState(null);
+    const [loading, setLoading] = useState(true);
+
     const [savedVocab, setSavedVocab] = useState({});
     const [translatingWord, setTranslatingWord] = useState(null);
-    const [showQuiz, setShowQuiz] = useState(false);
     const [completing, setCompleting] = useState(false);
 
     const [selection, setSelection] = useState(null);
@@ -28,7 +35,39 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
     const [isExplaining, setIsExplaining] = useState(false);
     const [explanationIndex, setExplanationIndex] = useState(null);
 
-    const contentToDisplay = showingSimplified ? simplifiedContent : chapter.content;
+    // Fetch Book and Chapter
+    useEffect(() => {
+        if (!currentUser || !bookId) return;
+
+        setLoading(true);
+        const bookRef = doc(db, 'users', currentUser.uid, 'books', bookId);
+
+        const unsubscribe = onSnapshot(bookRef, (docSnapshot) => {
+            if (docSnapshot.exists()) {
+                const bookData = { id: docSnapshot.id, ...docSnapshot.data() };
+                setBook(bookData);
+
+                // Find chapter
+                if (bookData.chapters) {
+                    const foundChapter = bookData.chapters.find(c =>
+                        String(c.id) === String(chapterId) || String(c.number) === String(chapterId)
+                    );
+                    if (foundChapter) {
+                        setChapter(foundChapter);
+                    } else {
+                        console.error("Chapter not found");
+                        // navigate(`/book/${bookId}`); // Optional: redirect if not found
+                    }
+                }
+            } else {
+                console.error("Book not found");
+                navigate('/books');
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser, bookId, chapterId, navigate]);
 
     useEffect(() => {
         fetchModels().then(models => {
@@ -37,20 +76,19 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         });
     }, []);
 
-    // Load saved vocab (simplified - ideally passed from parent or context to avoid refetching)
-    useEffect(() => {
-        // For now, we won't re-fetch vocab here to keep it simple, 
-        // assuming the main app might pass it down or we just fetch on demand.
-        // Let's just fetch it once for this view to be self-contained if needed.
-        // In a real app, use a Context or global store.
-    }, []);
+    const contentToDisplay = showingSimplified ? simplifiedContent : (chapter?.content || '');
 
     // Split content into sentences for highlighting
     useEffect(() => {
         if (contentToDisplay) {
-            const segmenter = new Intl.Segmenter('de', { granularity: 'sentence' });
-            const segments = Array.from(segmenter.segment(contentToDisplay));
-            setSentences(segments.map(s => s.segment));
+            try {
+                const segmenter = new Intl.Segmenter('de', { granularity: 'sentence' });
+                const segments = Array.from(segmenter.segment(contentToDisplay));
+                setSentences(segments.map(s => s.segment));
+            } catch (e) {
+                // Fallback for browsers without Intl.Segmenter or non-German text
+                setSentences(contentToDisplay.match(/[^.!?]+[.!?]+/g) || [contentToDisplay]);
+            }
         }
     }, [contentToDisplay]);
 
@@ -122,9 +160,6 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         const cleanWord = originalToken.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
         if (!cleanWord || cleanWord.length < 2) return;
 
-        // Check if already saved (local state check would go here)
-        // For this MVP, we'll just do the translation/save directly.
-
         try {
             setTranslatingWord(cleanWord);
 
@@ -158,6 +193,7 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
     };
 
     const handleComplete = async () => {
+        if (!book || !chapter) return;
         setCompleting(true);
         try {
             const progressRef = doc(db, 'users', currentUser.uid, 'bookProgress', book.id);
@@ -174,12 +210,12 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
 
             if (nextChapter) {
                 // Move to next chapter
-                setChapter(nextChapter);
+                navigate(`/book/${book.id}/read/${nextChapter.id || nextChapter.number}`);
                 window.scrollTo(0, 0);
             } else {
                 // Book finished!
                 alert("Congratulations! You've finished the book!");
-                setView('book_detail');
+                navigate(`/book/${book.id}`);
             }
 
         } catch (error) {
@@ -208,6 +244,15 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
         }
     };
 
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <Loader2 className="animate-spin text-indigo-600" size={32} />
+            </div>
+        );
+    }
+
+    if (!chapter) return <div className="p-8 text-center">Chapter not found</div>;
 
     return (
         <div
@@ -255,12 +300,12 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
             {/* Toolbar */}
             <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex justify-between items-center sticky top-0 z-10">
                 <button
-                    onClick={() => setView('book_detail')}
+                    onClick={() => navigate(`/book/${bookId}`)}
                     className="text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
                 >
                     <ChevronLeft size={18} /> Back to Book
                 </button>
-                <div className="font-bold text-slate-700 dark:text-slate-200">
+                <div className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[200px] md:max-w-md">
                     Chapter {chapter.number}: {chapter.title}
                 </div>
                 <div className="flex gap-2 items-center">
@@ -502,8 +547,6 @@ export default function ChapterReader({ chapter, book, setView, setChapter, setA
                     })}
 
                 </div>
-
-                {/* Inline Explanation Card */}
 
             </div>
 
