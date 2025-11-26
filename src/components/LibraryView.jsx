@@ -18,7 +18,8 @@ import {
     Download,
     Shield,
     Check,
-    X
+    X,
+    Brain
 } from 'lucide-react';
 import NewsModal from './library/NewsModal';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,7 +45,8 @@ export default function LibraryView({
     onSelect,
     onAdd,
     onGenerate,
-    onSaveText
+    onSaveText,
+    onStartFlashcards
 }) {
     const { currentUser } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
@@ -215,6 +217,12 @@ export default function LibraryView({
             unknownPercent: Math.round((unknownCount / totalWords) * 100),
             totalWords
         };
+    };
+
+    // Get vocabulary count for a specific text
+    const getVocabCount = (textId) => {
+        if (!savedVocab) return 0;
+        return Object.values(savedVocab).filter(word => word.sourceTextId === textId).length;
     };
 
     const getDifficultyColor = (percent, isRead) => {
@@ -555,6 +563,20 @@ export default function LibraryView({
                                             {/* Private Actions */}
                                             {activeTab === 'private' && (
                                                 <>
+                                                    {/* Flashcard Button - only show for read stories with vocab */}
+                                                    {text.isRead && stats.unknownCount > 0 && onStartFlashcards && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onStartFlashcards(text.title, text.content);
+                                                            }}
+                                                            className="flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition text-[10px] md:text-xs font-bold"
+                                                            title={`Practice ${stats.unknownCount} words from this story`}
+                                                        >
+                                                            <Brain size={12} className="md:w-[14px] md:h-[14px]" />
+                                                            {stats.unknownCount}
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();

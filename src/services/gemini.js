@@ -1,5 +1,5 @@
 const GEMINI_API_KEY = "AIzaSyAyNH7EFr-BEcnO4wtrKusbK819jq0opqE";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
 
 /**
  * Generates a German story based on topic, level, and length using Google Gemini.
@@ -9,13 +9,13 @@ const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-
  * @returns {Promise<{title: string, content: string}>} - The generated story.
  */
 export async function generateStory(topic, level, length, theme = "") {
-    const lengthMap = {
-        "Short": "approx 100 words",
-        "Medium": "approx 250 words",
-        "Long": "approx 500 words"
-    };
+  const lengthMap = {
+    "Short": "approx 100 words",
+    "Medium": "approx 250 words",
+    "Long": "approx 500 words"
+  };
 
-    const prompt = `
+  const prompt = `
     Write a German story about "${topic}"${theme ? ` with a theme of "${theme}"` : ""} for a learner at ${level} level.
     Length: ${lengthMap[length] || "approx 200 words"}.
     
@@ -27,45 +27,45 @@ export async function generateStory(topic, level, length, theme = "") {
     Do not include markdown formatting (like \`\`\`json) in the response. Just the raw JSON string.
   `;
 
-    try {
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }]
-            })
-        });
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }]
+      })
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || response.statusText);
-        }
-
-        const data = await response.json();
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-            throw new Error("Invalid response format from Gemini");
-        }
-        const textResponse = data.candidates[0].content.parts[0].text;
-        console.log("Gemini Raw Response:", textResponse);
-
-        // Clean up potential markdown formatting if the model ignores instructions
-        const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-
-        return JSON.parse(cleanJson);
-    } catch (error) {
-        console.error("Story Generation failed:", error);
-        throw error;
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || response.statusText);
     }
+
+    const data = await response.json();
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error("Invalid response format from Gemini");
+    }
+    const textResponse = data.candidates[0].content.parts[0].text;
+    console.log("Gemini Raw Response:", textResponse);
+
+    // Clean up potential markdown formatting if the model ignores instructions
+    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Story Generation failed:", error);
+    throw error;
+  }
 }
 
 export async function generateWordDeepDive(word, context) {
-    const prompt = `
+  const prompt = `
     Analyze the German word "${word}"${context ? ` in the context of: "${context}"` : ""}.
     Provide a deep dive analysis for a language learner.
     
@@ -84,30 +84,30 @@ export async function generateWordDeepDive(word, context) {
     Do not include markdown formatting. Just the raw JSON string.
   `;
 
-    try {
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
 
-        if (!response.ok) throw new Error(response.statusText);
+    if (!response.ok) throw new Error(response.statusText);
 
-        const data = await response.json();
-        const textResponse = data.candidates[0].content.parts[0].text;
-        const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const data = await response.json();
+    const textResponse = data.candidates[0].content.parts[0].text;
+    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
-        return JSON.parse(cleanJson);
-    } catch (error) {
-        console.error("Deep Dive generation failed:", error);
-        throw error;
-    }
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Deep Dive generation failed:", error);
+    throw error;
+  }
 }
 
 export async function analyzeWriting(text) {
-    const prompt = `
+  const prompt = `
     You are a German language teacher correcting a student's writing.
     Analyze the following German text:
     "${text}"
@@ -132,24 +132,121 @@ export async function analyzeWriting(text) {
     Do not include markdown formatting. Just the raw JSON string.
   `;
 
-    try {
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
 
-        if (!response.ok) throw new Error(response.statusText);
+    if (!response.ok) throw new Error(response.statusText);
 
-        const data = await response.json();
-        const textResponse = data.candidates[0].content.parts[0].text;
-        const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+    const data = await response.json();
+    const textResponse = data.candidates[0].content.parts[0].text;
+    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
 
-        return JSON.parse(cleanJson);
-    } catch (error) {
-        console.error("Writing analysis failed:", error);
-        throw error;
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Writing analysis failed:", error);
+    throw error;
+  }
+}
+
+/**
+ * Explains selected text using predefined templates
+ * @param {string} text - The selected text to explain
+ * @param {string} template - The template type: "grammar", "sentence", or "word"
+ * @param {string} context - Optional surrounding context
+ * @returns {Promise<Object>} - Structured explanation based on template
+ */
+export async function explainText(text, template, context = "") {
+  const prompts = {
+    grammar: `
+You are a German language teacher. Analyze the grammar in this German text:
+"${text}"
+${context ? `Context: "${context}"` : ""}
+
+Explain the grammatical structures in a clear, educational way.
+
+Return ONLY valid JSON with this structure:
+{
+  "summary": "Brief overview of main grammatical points (1-2 sentences)",
+  "structures": [
+    {
+      "element": "grammatical element (e.g., 'den Mann')",
+      "explanation": "what it is and why (e.g., 'Accusative case - direct object')"
     }
+  ],
+  "tips": ["Helpful tip 1", "Helpful tip 2"]
+}
+Do not include markdown formatting. Just the raw JSON string.`,
+
+    sentence: `
+You are a German language teacher. Explain this German sentence to a learner:
+"${text}"
+${context ? `Context: "${context}"` : ""}
+
+Provide translation and breakdown.
+
+Return ONLY valid JSON with this structure:
+{
+  "translation": "English translation of the sentence",
+  "breakdown": [
+    {
+      "part": "word or phrase from the sentence",
+      "meaning": "its meaning/function in this context"
+    }
+  ],
+  "notes": "Any important notes about usage, idioms, or nuances"
+}
+Do not include markdown formatting. Just the raw JSON string.`,
+
+    word: `
+You are a German language teacher. Explain this German word or phrase:
+"${text}"
+${context ? `In context: "${context}"` : ""}
+
+Provide detailed explanation for a language learner.
+
+Return ONLY valid JSON with this structure:
+{
+  "translation": "English translation",
+  "explanation": "Detailed explanation of meaning and usage",
+  "examples": [
+    {"german": "Example sentence 1", "english": "Translation 1"},
+    {"german": "Example sentence 2", "english": "Translation 2"}
+  ],
+  "tips": "Learning tips or common mistakes to avoid"
+}
+Do not include markdown formatting. Just the raw JSON string.`
+  };
+
+  const prompt = prompts[template] || prompts.sentence;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      const errorMessage = errorData.error?.message || response.statusText;
+      throw new Error(`API Error: ${errorMessage}`);
+    }
+
+    const data = await response.json();
+    const textResponse = data.candidates[0].content.parts[0].text;
+    const cleanJson = textResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    return JSON.parse(cleanJson);
+  } catch (error) {
+    console.error("Text explanation failed:", error);
+    throw error;
+  }
 }

@@ -32,7 +32,8 @@ import {
   MoreVertical,
   Sun,
   Moon,
-  AlertCircle
+  AlertCircle,
+  GraduationCap
 } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import ePub from 'epubjs';
@@ -59,7 +60,7 @@ import {
 } from 'firebase/firestore';
 import { translateWord } from './services/translation';
 import { generateStory as generateGeminiStory } from './services/gemini';
-import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels, simplifyStory, adaptContent } from './services/ollama';
+import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels, simplifyStory, adaptContent, explainText } from './services/ollama';
 import { extractTextFromPDF, chunkText } from './services/pdfProcessor';
 
 import FlashcardView from './components/FlashcardView';
@@ -68,6 +69,7 @@ import VocabDashboard from './components/VocabDashboard';
 import SpeakingPractice from './components/SpeakingPractice';
 import ProgressView from './components/ProgressView';
 import WritingPractice from './components/WritingPractice';
+import GrammarView from './components/GrammarView';
 import { isDue } from './services/srs';
 import { recordActivitySession, recordReadingSession, CATEGORIES } from './services/activityTracker';
 import { useTTS } from './hooks/useTTS';
@@ -122,7 +124,8 @@ const SAMPLE_TEXTS = [
 
 function AuthenticatedApp() {
   // --- STATE ---
-  const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail', 'improvements'
+  const [view, setView] = useState('journey'); // 'journey', 'library', 'reader', 'vocab', 'add', 'generator', 'books', 'book_detail', 'improvements', 'grammar'
+  const [selectedModel, setSelectedModel] = useState('qwq:latest'); // Global model selection
   const [activeText, setActiveText] = useState(null); // Changed from ID to object
   const [activeBook, setActiveBook] = useState(null); // New state for active book
   const [activeChapter, setActiveChapter] = useState(null); // New state for active chapter
@@ -130,6 +133,7 @@ function AuthenticatedApp() {
   const [showQuiz, setShowQuiz] = useState(false);
   const [flashcardIndex, setFlashcardIndex] = useState(0);
   const [showFlashcardAnswer, setShowFlashcardAnswer] = useState(false);
+  const [initialDeck, setInitialDeck] = useState(null); // For deep linking to a specific deck
   const [translatingWord, setTranslatingWord] = useState(null); // Track which word is being translated
   const [isSyncing, setIsSyncing] = useState(false);
   const { speak, stop, isPlaying, isLoading, isModelLoading, currentSentenceIndex, generatingSentences } = useTTS();
@@ -258,10 +262,13 @@ function AuthenticatedApp() {
           console.error("Translation error", err);
         }
 
-        // 4. Save to Firestore
+        // 4. Save to Firestore with source story information
         await setDoc(vocabRef, {
           definition: translation,
           context: contextSentence,
+          sourceTextId: activeText?.id || null,
+          sourceTextTitle: activeText?.title || null,
+          deck: activeText?.title || 'General',
           createdAt: serverTimestamp()
         });
         console.log("[toggleWord] Returning translation:", translation);
@@ -996,6 +1003,11 @@ function AuthenticatedApp() {
     const [showingSimplified, setShowingSimplified] = useState(false);
     const [activeTooltip, setActiveTooltip] = useState(null); // For mobile click-to-show
 
+    // Template-based Ask AI state
+    const [explanation, setExplanation] = useState(null);
+    const [isExplaining, setIsExplaining] = useState(false);
+    const [explanationIndex, setExplanationIndex] = useState(null);
+
     const tokens = tokenize(showingSimplified ? simplifiedContent : activeText.content);
 
     // Auto-hide tooltip on mobile
@@ -1084,13 +1096,31 @@ function AuthenticatedApp() {
       }
     };
 
-    const handleAskAI = (e) => {
-      e.stopPropagation();
+    const handleExplainText = async (template) => {
       if (!selection) return;
-      setChatInitialMessage(`Explain this: "${selection.text}"`);
-      setChatWidgetOpen(true);
-      setSelection(null);
-      window.getSelection().removeAllRanges();
+
+      // Find sentence index
+      const sIndex = sentences.findIndex(s => s.includes(selection.text));
+      setExplanationIndex(sIndex);
+
+      const contextSentence = sentences[sIndex] || "";
+
+      setIsExplaining(true);
+      try {
+        const result = await explainText(selection.text, template, contextSentence, selectedModel);
+        setExplanation({
+          template,
+          text: selection.text,
+          data: result
+        });
+      } catch (error) {
+        console.error("Explanation failed:", error);
+        alert("Failed to generate explanation. Please try again.");
+      } finally {
+        setIsExplaining(false);
+        setSelection(null);
+        window.getSelection().removeAllRanges();
+      }
     };
 
     const handleSpeak = () => {
@@ -1112,13 +1142,36 @@ function AuthenticatedApp() {
             className="fixed z-50 -translate-x-1/2 -translate-y-full mb-2"
             style={{ top: selection.top, left: selection.left }}
           >
-            <button
-              onClick={handleAskAI}
-              className="bg-indigo-600 text-white text-sm font-bold py-2 px-4 rounded-full shadow-lg hover:bg-indigo-700 flex items-center gap-2 animate-in fade-in zoom-in duration-200"
-            >
-              <MessageCircle size={16} /> Ask AI
-            </button>
-            <div className="w-3 h-3 bg-indigo-600 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1.5"></div>
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-2xl border border-slate-200 dark:border-slate-700 p-2 flex gap-2 animate-in fade-in zoom-in duration-200">
+              <button
+                onClick={() => handleExplainText('grammar')}
+                disabled={isExplaining}
+                className="text-indigo-600 dark:text-indigo-400 text-xs font-semibold py-2 px-3 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-900/30 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                title="Explain Grammar"
+              >
+                <GraduationCap size={14} />
+                Grammar
+              </button>
+              <button
+                onClick={() => handleExplainText('sentence')}
+                disabled={isExplaining}
+                className="text-emerald-600 dark:text-emerald-400 text-xs font-semibold py-2 px-3 rounded-md hover:bg-emerald-50 dark:hover:bg-emerald-900/30 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                title="Explain Sentence"
+              >
+                <BookOpen size={14} />
+                Sentence
+              </button>
+              <button
+                onClick={() => handleExplainText('word')}
+                disabled={isExplaining}
+                className="text-amber-600 dark:text-amber-400 text-xs font-semibold py-2 px-3 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                title="Explain Word/Phrase"
+              >
+                <MessageCircle size={14} />
+                Word
+              </button>
+            </div>
+            <div className="w-3 h-3 bg-white dark:bg-slate-800 border-r border-b border-slate-200 dark:border-slate-700 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1.5"></div>
           </div>
         )}
 
@@ -1310,97 +1363,228 @@ function AuthenticatedApp() {
                     const tokens = tokenize(sentence);
 
                     return (
-                      <div key={sIndex} className={`group relative transition-colors duration-300 rounded-lg py-2 px-1 -mx-1 ${isCurrentSentence ? 'bg-yellow-100 dark:bg-yellow-900' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                        {/* Sentence Play Button - larger hit area */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            speak(activeText.content, sIndex);
-                          }}
-                          className={`absolute -left-10 top-1/2 -translate-y-1/2 p-2 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100 ${isCurrentSentence ? 'opacity-100 text-indigo-600' : ''}`}
-                          title="Play from here"
-                          disabled={isGenerating}
-                        >
-                          {isGenerating ? (
-                            <Loader2 size={16} className="animate-spin" />
-                          ) : (
-                            <Play size={16} className={isCurrentSentence && isPlaying ? "fill-current" : ""} />
-                          )}
-                        </button>
+                      <React.Fragment key={sIndex}>
+                        <div className={`group relative transition-colors duration-300 rounded-lg py-2 px-1 -mx-1 ${isCurrentSentence ? 'bg-yellow-100 dark:bg-yellow-900' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                          {/* Sentence Play Button - larger hit area */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              speak(activeText.content, sIndex);
+                            }}
+                            className={`absolute -left-10 top-1/2 -translate-y-1/2 p-2 rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition opacity-0 group-hover:opacity-100 ${isCurrentSentence ? 'opacity-100 text-indigo-600' : ''}`}
+                            title="Play from here"
+                            disabled={isGenerating}
+                          >
+                            {isGenerating ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Play size={16} className={isCurrentSentence && isPlaying ? "fill-current" : ""} />
+                            )}
+                          </button>
 
-                        {tokens.map((token, tIndex) => {
-                          const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-                          const isSaved = savedVocab.hasOwnProperty(cleanToken);
-                          const isTranslating = translatingWord === cleanToken;
-                          const isWord = /\w/.test(token);
-                          const uniqueId = `${sIndex}-${tIndex}`;
+                          {tokens.map((token, tIndex) => {
+                            const cleanToken = token.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+                            const isSaved = savedVocab.hasOwnProperty(cleanToken);
+                            const isTranslating = translatingWord === cleanToken;
+                            const isWord = /\w/.test(token);
+                            const uniqueId = `${sIndex}-${tIndex}`;
 
-                          if (!isWord) return <span key={tIndex}>{token}</span>;
+                            if (!isWord) return <span key={tIndex}>{token}</span>;
 
-                          return (
-                            <span
-                              key={tIndex}
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                const hasHover = window.matchMedia('(hover: hover)').matches;
-                                console.log("[Word Click] Clicked token:", token, "ID:", uniqueId, "Hover:", hasHover);
+                            return (
+                              <span
+                                key={tIndex}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const hasHover = window.matchMedia('(hover: hover)').matches;
+                                  console.log("[Word Click] Clicked token:", token, "ID:", uniqueId, "Hover:", hasHover);
 
-                                // If already saved
-                                if (isSaved && savedVocab[cleanToken]) {
-                                  if (hasHover) {
-                                    // Desktop: Click always removes (un-highlights)
-                                    // Tooltip is handled by hover
-                                    await toggleWord(token);
-                                    setActiveTooltip(null);
-                                  } else {
-                                    // Mobile: Click shows tooltip, or removes if already shown
-                                    if (activeTooltip === uniqueId) {
+                                  // If already saved
+                                  if (isSaved && savedVocab[cleanToken]) {
+                                    if (hasHover) {
+                                      // Desktop: Click always removes (un-highlights)
+                                      // Tooltip is handled by hover
                                       await toggleWord(token);
                                       setActiveTooltip(null);
                                     } else {
-                                      setActiveTooltip(uniqueId);
+                                      // Mobile: Click shows tooltip, or removes if already shown
+                                      if (activeTooltip === uniqueId) {
+                                        await toggleWord(token);
+                                        setActiveTooltip(null);
+                                      } else {
+                                        setActiveTooltip(uniqueId);
+                                      }
                                     }
+                                    return;
                                   }
-                                  return;
-                                }
 
-                                // If not saved, translate and save
-                                const translation = await toggleWord(token);
+                                  // If not saved, translate and save
+                                  const translation = await toggleWord(token);
 
-                                // Show tooltip after saving (for both mobile and desktop feedback)
-                                if (translation) {
-                                  setActiveTooltip(uniqueId);
-                                }
-                              }}
-                              className={`group/word relative cursor-pointer transition-colors duration-200 rounded px-0.5
+                                  // Show tooltip after saving (for both mobile and desktop feedback)
+                                  if (translation) {
+                                    setActiveTooltip(uniqueId);
+                                  }
+                                }}
+                                className={`group/word relative cursor-pointer transition-colors duration-200 rounded px-0.5
                                         ${isSaved
-                                  ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
-                                  : 'hover:bg-indigo-100 active:bg-indigo-200'}
+                                    ? 'bg-amber-200 text-amber-900 hover:bg-amber-300 border-b-2 border-amber-400'
+                                    : 'hover:bg-indigo-100 active:bg-indigo-200'}
                                         ${isTranslating ? 'opacity-70 cursor-wait' : ''}`}
-                            >
-                              {token}
-                              {isTranslating && <span className="inline-block w-1.5 h-1.5 ml-0.5 rounded-full bg-indigo-500 animate-pulse"></span>}
+                              >
+                                {token}
+                                {isTranslating && <span className="inline-block w-1.5 h-1.5 ml-0.5 rounded-full bg-indigo-500 animate-pulse"></span>}
 
-                              {/* Hover Tooltip (desktop) + Click Tooltip (mobile) */}
-                              {isSaved && savedVocab[cleanToken] && (
-                                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-[200px] ${activeTooltip === uniqueId ? 'block' : 'hidden group-hover/word:block'
-                                  }`}>
-                                  <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
-                                    {savedVocab[cleanToken].definition}
+                                {/* Hover Tooltip (desktop) + Click Tooltip (mobile) */}
+                                {isSaved && savedVocab[cleanToken] && (
+                                  <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-max max-w-[200px] ${activeTooltip === uniqueId ? 'block' : 'hidden group-hover/word:block'
+                                    }`}>
+                                    <div className="bg-slate-800 text-white text-xs rounded py-1 px-2 shadow-lg text-center">
+                                      {savedVocab[cleanToken].definition}
+                                    </div>
+                                    <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
                                   </div>
-                                  <div className="w-2 h-2 bg-slate-800 rotate-45 absolute left-1/2 -translate-x-1/2 -bottom-1"></div>
+                                )}
+                              </span>
+                            );
+                          })}
+                        </div>
+                        {/* Inline Explanation Card */}
+                        {(isExplaining || explanation) && explanationIndex === sIndex && (
+                          <div className="mt-4 mb-2 animate-in slide-in-from-top duration-300">
+                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 border-l-4 border-indigo-500 rounded-lg p-4 shadow-md">
+                              {isExplaining ? (
+                                <div className="flex items-center gap-3 text-indigo-700 dark:text-indigo-300">
+                                  <Loader2 size={20} className="animate-spin" />
+                                  <span className="text-sm font-medium">Generating explanation...</span>
                                 </div>
-                              )}
-                            </span>
-                          );
-                        })}
-                      </div>
+                              ) : explanation ? (
+                                <div className="space-y-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      {explanation.template === 'grammar' && <GraduationCap size={18} className="text-indigo-600 dark:text-indigo-400" />}
+                                      {explanation.template === 'sentence' && <BookOpen size={18} className="text-emerald-600 dark:text-emerald-400" />}
+                                      {explanation.template === 'word' && <MessageCircle size={18} className="text-amber-600 dark:text-amber-400" />}
+                                      <h3 className="font-bold text-slate-800 dark:text-slate-200">
+                                        {explanation.template.charAt(0).toUpperCase() + explanation.template.slice(1)} Explanation
+                                      </h3>
+                                    </div>
+                                    <button
+                                      onClick={() => setExplanation(null)}
+                                      className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                                    >
+                                      <X size={18} />
+                                    </button>
+                                  </div>
+
+                                  <div className="text-sm bg-white/50 dark:bg-slate-800/50 rounded p-2 font-medium text-slate-700 dark:text-slate-300 italic">
+                                    "{explanation.text}"
+                                  </div>
+
+                                  {/* Grammar Template */}
+                                  {explanation.template === 'grammar' && (
+                                    <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                                      {explanation.data.summary && (
+                                        <p className="font-medium">{explanation.data.summary}</p>
+                                      )}
+                                      {explanation.data.structures && explanation.data.structures.length > 0 && (
+                                        <div className="space-y-1.5">
+                                          <p className="font-semibold text-xs uppercase text-slate-500 dark:text-slate-400">Structures:</p>
+                                          {explanation.data.structures.map((struct, idx) => (
+                                            <div key={idx} className="bg-white dark:bg-slate-800 rounded p-2">
+                                              <span className="font-mono text-indigo-600 dark:text-indigo-400">{struct.element}</span>
+                                              {' → '}
+                                              <span>{struct.explanation}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {explanation.data.tips && explanation.data.tips.length > 0 && (
+                                        <div className="mt-2 bg-indigo-100 dark:bg-indigo-900/30 rounded p-2">
+                                          <p className="font-semibold text-xs uppercase text-indigo-700 dark:text-indigo-300 mb-1">Tips:</p>
+                                          <ul className="list-disc list-inside space-y-0.5 text-xs">
+                                            {explanation.data.tips.map((tip, idx) => (
+                                              <li key={idx}>{tip}</li>
+                                            ))}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Sentence Template */}
+                                  {explanation.template === 'sentence' && (
+                                    <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                                      {explanation.data.translation && (
+                                        <div className="bg-emerald-50 dark:bg-emerald-900/30 rounded p-2">
+                                          <p className="font-semibold text-xs uppercase text-emerald-700 dark:text-emerald-300 mb-1">Translation:</p>
+                                          <p className="text-emerald-900 dark:text-emerald-100">{explanation.data.translation}</p>
+                                        </div>
+                                      )}
+                                      {explanation.data.breakdown && explanation.data.breakdown.length > 0 && (
+                                        <div className="space-y-1.5">
+                                          <p className="font-semibold text-xs uppercase text-slate-500 dark:text-slate-400">Breakdown:</p>
+                                          {explanation.data.breakdown.map((part, idx) => (
+                                            <div key={idx} className="bg-white dark:bg-slate-800 rounded p-2">
+                                              <span className="font-mono text-emerald-600 dark:text-emerald-400">{part.part}</span>
+                                              {' → '}
+                                              <span>{part.meaning}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {explanation.data.notes && (
+                                        <div className="bg-white dark:bg-slate-800 rounded p-2 text-xs italic">
+                                          <strong>Note:</strong> {explanation.data.notes}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Word Template */}
+                                  {explanation.template === 'word' && (
+                                    <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                                      {explanation.data.translation && (
+                                        <div className="bg-amber-50 dark:bg-amber-900/30 rounded p-2">
+                                          <p className="font-semibold text-xs uppercase text-amber-700 dark:text-amber-300 mb-1">Translation:</p>
+                                          <p className="text-amber-900 dark:text-amber-100 font-medium">{explanation.data.translation}</p>
+                                        </div>
+                                      )}
+                                      {explanation.data.explanation && (
+                                        <p>{explanation.data.explanation}</p>
+                                      )}
+                                      {explanation.data.examples && explanation.data.examples.length > 0 && (
+                                        <div className="space-y-1.5">
+                                          <p className="font-semibold text-xs uppercase text-slate-500 dark:text-slate-400">Examples:</p>
+                                          {explanation.data.examples.map((ex, idx) => (
+                                            <div key={idx} className="bg-white dark:bg-slate-800 rounded p-2 space-y-1">
+                                              <p className="font-mono text-amber-600 dark:text-amber-400">{ex.german}</p>
+                                              <p className="text-xs text-slate-500 dark:text-slate-400">{ex.english}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {explanation.data.tips && (
+                                        <div className="bg-amber-100 dark:bg-amber-900/30 rounded p-2 text-xs italic">
+                                          <strong>Tips:</strong> {explanation.data.tips}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null}
+                            </div>
+                          </div>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </div>
                 <p className="mt-8 text-sm text-slate-400 italic text-center">
                   Click any word to highlight it and add it to your vocabulary list.
                 </p>
+
+
               </div>
             )
           }
@@ -1444,11 +1628,14 @@ function AuthenticatedApp() {
         </button>
 
         <button
-          onClick={() => setView('flashcards')}
+          onClick={() => {
+            setInitialDeck(null);
+            setView('flashcards');
+          }}
           className={`flex flex-col items-center gap-1 text-[10px] md:text-xs font-medium transition relative p-1 rounded-lg ${view === 'flashcards' ? 'text-indigo-600 bg-indigo-50 md:bg-transparent' : 'text-slate-400 hover:text-slate-600'}`}
         >
-          <Brain className="mx-auto" size={24} />
-          Cards
+          <Brain size={20} className={`mx-auto ${view === 'flashcards' ? 'fill-current' : ''}`} />
+          Flashcards
           {dueCount > 0 && (
             <span className="absolute top-0 right-1 md:right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
               {dueCount}
@@ -1498,6 +1685,13 @@ function AuthenticatedApp() {
             className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'vocab' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
             <Highlighter className="mx-auto" size={24} /> Vocab
+          </button>
+
+          <button
+            onClick={() => setView('grammar')}
+            className={`flex flex-col md:items-center gap-1 text-xs md:text-xs font-medium transition ${view === 'grammar' ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            <Brain className="mx-auto" size={24} /> Grammar
           </button>
 
           <button
@@ -1601,6 +1795,10 @@ function AuthenticatedApp() {
                 setView('generator');
               }}
               onSaveText={handleSaveText}
+              onStartFlashcards={(title, content) => {
+                setInitialDeck({ id: title, title, content });
+                setView('flashcards');
+              }}
             />
           )}
           {view === 'reader' && <ReaderView />}
@@ -1618,7 +1816,8 @@ function AuthenticatedApp() {
           {view === 'chat' && <ChatView />}
           {view === 'progress' && <ProgressView />}
           {view === 'improvements' && <ImprovementsView />}
-          {view === 'flashcards' && <FlashcardView />}
+          {view === 'flashcards' && <FlashcardView initialDeck={initialDeck} />}
+          {view === 'grammar' && <GrammarView selectedModel={selectedModel} />}
           {view === 'books' && <BooksView setView={setView} setActiveBook={setActiveBook} onImportBook={startBackgroundImport} />}
           {view === 'book_detail' && (
             <BookDetailView
@@ -1660,6 +1859,8 @@ function AuthenticatedApp() {
         onClose={() => setShowSettings(false)}
         isAdmin={isAdmin}
         setIsAdmin={setIsAdmin}
+        selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
       />
     </div>
   );

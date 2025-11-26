@@ -534,3 +534,105 @@ Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
         return { level: "A2", reasoning: "Could not detect level automatically." };
     }
 };
+
+export const explainText = async (text, template, context = "", model, targetLanguage = "German") => {
+    const prompts = {
+        grammar: `
+You are a ${targetLanguage} language teacher. Analyze the grammar in this ${targetLanguage} text:
+"${text}"
+${context ? `Context: "${context}"` : ""}
+
+Explain the grammatical structures in a clear, educational way.
+
+Return ONLY valid JSON with this structure:
+{
+  "summary": "Brief overview of main grammatical points (1-2 sentences)",
+  "structures": [
+    {
+      "element": "grammatical element (e.g., 'den Mann')",
+      "explanation": "what it is and why (e.g., 'Accusative case - direct object')"
+    }
+  ],
+  "tips": ["Helpful tip 1", "Helpful tip 2"]
+}
+Do not include markdown formatting. Just the raw JSON string.`,
+
+        sentence: `
+You are a ${targetLanguage} language teacher. Explain this ${targetLanguage} sentence to a learner:
+"${text}"
+${context ? `Context: "${context}"` : ""}
+
+Provide translation and breakdown.
+
+Return ONLY valid JSON with this structure:
+{
+  "translation": "English translation of the sentence",
+  "breakdown": [
+    {
+      "part": "word or phrase from the sentence",
+      "meaning": "its meaning/function in this context"
+    }
+  ],
+  "notes": "Any important notes about usage, idioms, or nuances"
+}
+Do not include markdown formatting. Just the raw JSON string.`,
+
+        word: `
+You are a ${targetLanguage} language teacher. Explain this ${targetLanguage} word or phrase:
+"${text}"
+${context ? `In context: "${context}"` : ""}
+
+Provide detailed explanation for a language learner.
+
+Return ONLY valid JSON with this structure:
+{
+  "translation": "English translation",
+  "explanation": "Detailed explanation of meaning and usage",
+  "examples": [
+    {"german": "Example sentence 1", "english": "Translation 1"},
+    {"german": "Example sentence 2", "english": "Translation 2"}
+  ],
+  "tips": "Learning tips or common mistakes to avoid"
+}
+Do not include markdown formatting. Just the raw JSON string.`
+    };
+
+    const prompt = prompts[template] || prompts.sentence;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    { role: "system", content: prompt }, // Using system role for the prompt template
+                    { role: "user", content: "Explain now." }
+                ],
+                stream: false,
+                format: "json"
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Ollama API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        let jsonStr = data.message?.content;
+
+        if (!jsonStr) {
+            throw new Error("No content in response");
+        }
+
+        // Cleanup
+        jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
+
+        return JSON.parse(jsonStr);
+
+    } catch (error) {
+        console.error("Text explanation failed:", error);
+        throw error;
+    }
+};
