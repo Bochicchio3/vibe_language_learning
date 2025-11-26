@@ -24,4 +24,8 @@ dist-ssr
 *.sw?
 
 # TTS Models (downloaded by scripts/download_models.js)
+# TTS Models (downloaded by scripts/download_models.js)
 public/wasm/
+
+# Test Outputs
+tests/outputs/

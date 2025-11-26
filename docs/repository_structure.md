@@ -8,7 +8,7 @@ This document provides a detailed overview of the `vibe_language_learning` repos
 - **`postcss.config.js`**: Configuration for PostCSS (used by Tailwind).
 - **`eslint.config.js`**: Linting configuration.
 - **`index.html`**: Entry point for the application.
-- **`public/`**: Static assets served directly (e.g., WASM files for TTS).
+- **`public/`**: Static assets served directly (e.g., WASM files, samples).
 
 ## Source Directory (`src/`)
 
@@ -49,7 +49,7 @@ This document provides a detailed overview of the `vibe_language_learning` repos
 - **`SettingsModal.jsx`**: User settings (profile, preferences).
 
 #### Views (Pages)
-- **`JourneyView.jsx`**: Home dashboard showing user progress, current level, and recommended activities.
+
 - **`LibraryView.jsx`**: Displays user's text library and public texts. Allows filtering and searching.
 - **`BooksView.jsx`**: Displays user's book library (PDFs/EPUBs). Handles book import initiation.
 - **`BookDetailView.jsx`**: Shows details of a specific book, including chapters and progress.
@@ -96,6 +96,13 @@ This document provides a detailed overview of the `vibe_language_learning` repos
 ### Workers (`src/workers/`)
 - **`sherpa.worker.js`**: Web Worker for running Sherpa-ONNX TTS models off the main thread.
 
-### Data (`src/data/`)
-- **`journeyData.js`**: Static data defining the user's learning journey structure.
-- **`ein_neues_leben.json`**: Example content.
+## Tests Directory (`tests/`)
+- **`unit/`**: Unit tests (e.g., `tts.test.js`).
+- **`integration/`**: Integration and pipeline tests (`test_pipeline.js`, `verify_pipeline.py`, `setup.js`).
+- **`tools/`**: Utility scripts for testing (`inspect_text.py`, `test_translation.js`).
+- **`outputs/`**: Generated test output files (gitignored).
+- **`test_runner.js`**: Main script to run all tests.
+
+## Public Directory (`public/`)
+- **`samples/`**: Contains seed data and test files (e.g., `ein_neues_leben.json`, `Vita_e_avventure_di_Robinson_Crusoè.pdf`).
+- **`wasm/`**: Static WASM files for TTS.

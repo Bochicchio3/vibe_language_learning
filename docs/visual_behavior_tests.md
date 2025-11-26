@@ -4,7 +4,7 @@ This document outlines the manual visual verification steps to ensure the core f
 
 ## 1. Authentication & Onboarding
 - [ ] **Login**: Verify the login screen appears. Enter credentials (if applicable) or use guest access.
-- [ ] **Journey View**: Upon login, verify the "My Journey" dashboard loads with user stats (Level, XP, Streak).
+
 
 ## 2. Library & Reading
 - [ ] **Library Navigation**: Click "Library" in the sidebar. Verify the list of texts loads.
