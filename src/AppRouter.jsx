@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import LoginView from './components/LoginView';
-import JourneyView from './components/JourneyView';
+
 import LibraryView from './components/LibraryView';
 import ReaderView from './components/ReaderView';
 import ImportView from './components/ImportView';
@@ -30,7 +30,7 @@ export default function AppRouter() {
     return (
         <Routes>
             <Route path="/" element={<Layout />}>
-                <Route index element={<JourneyView />} />
+                <Route index element={<Navigate to="/library" replace />} />
                 <Route path="library" element={<LibraryView />} />
                 <Route path="read/:id" element={<ReaderView />} />
                 <Route path="import" element={<ImportView />} />

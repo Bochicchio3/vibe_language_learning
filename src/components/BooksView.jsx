@@ -5,7 +5,7 @@ import { collection, getDocs, setDoc, doc, query, orderBy, serverTimestamp, addD
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useImporter } from '../hooks/useImporter';
-import seedData from '../data/ein_neues_leben.json';
+
 import { extractTextFromPDF, chunkText } from '../services/pdfProcessor';
 import { fetchModels, detectLevel } from '../services/ollama';
 
@@ -98,6 +98,11 @@ export default function BooksView() {
     const seedBooks = async () => {
         setSeeding(true);
         try {
+            // Fetch seed data from public assets
+            const response = await fetch('/samples/ein_neues_leben.json');
+            if (!response.ok) throw new Error('Failed to load seed data');
+            const seedData = await response.json();
+
             // Use a fixed ID for the seed book so we don't create duplicates
             const bookId = 'ein_neues_leben';
             // Seed to public collection as approved by default
