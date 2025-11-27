@@ -1,0 +1,464 @@
+"""
+LLM Service using LiteLLM for unified interface
+Supports Ollama, OpenAI, Anthropic, Google Gemini, and more
+"""
+
+import litellm
+from typing import List, Dict, Any, Optional
+import json
+from config import config
+
+# Configure LiteLLM
+litellm.set_verbose = config.DEBUG
+
+# Set API keys if provided
+if config.OPENAI_API_KEY:
+    litellm.openai_key = config.OPENAI_API_KEY
+if config.ANTHROPIC_API_KEY:
+    litellm.anthropic_key = config.ANTHROPIC_API_KEY
+if config.GEMINI_API_KEY:
+    litellm.gemini_key = config.GEMINI_API_KEY
+
+# Configure Ollama base URL
+if config.OLLAMA_BASE_URL:
+    litellm.api_base = config.OLLAMA_BASE_URL
+
+
+class LLMService:
+    """Service for interacting with various LLM providers"""
+    
+    @staticmethod
+    async def chat_completion(
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+        response_format: Optional[str] = None
+    ) -> str:
+        """
+        Generic chat completion
+        
+        Args:
+            messages: List of message dicts with 'role' and 'content'
+            model: Model identifier (e.g., 'ollama/llama3.2', 'gpt-4o-mini')
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            response_format: 'json' for JSON mode, None for text
+            
+        Returns:
+            Generated text content
+        """
+        model = model or config.DEFAULT_LLM_MODEL
+        
+        kwargs = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+        }
+        
+        if max_tokens:
+            kwargs["max_tokens"] = max_tokens
+            
+        if response_format == "json":
+            kwargs["response_format"] = {"type": "json_object"}
+        
+        try:
+            response = litellm.completion(**kwargs)
+            return response.choices[0].message.content
+        except Exception as e:
+            raise Exception(f"LLM completion failed: {str(e)}")
+    
+    @staticmethod
+    async def generate_story(
+        topic: str,
+        level: str,
+        length: str,
+        theme: str = "",
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, str]:
+        """Generate a language learning story"""
+        
+        length_map = {
+            "Short": "approx 100 words",
+            "Medium": "approx 250 words",
+            "Long": "approx 500 words"
+        }
+        
+        system_prompt = f"""You are a {target_language} language teacher.
+Write a {target_language} story about "{topic}"{f' with a theme of "{theme}"' if theme else ''} for a learner at {level} level.
+Length: {length_map.get(length, 'approx 200 words')}.
+
+IMPORTANT: Return ONLY valid JSON with the following structure:
+{{
+  "title": "The Title",
+  "content": "The story text..."
+}}
+Do not include markdown formatting (like ```json) in the response. Just the raw JSON string."""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "Generate the story now."}
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.7,
+            response_format="json"
+        )
+        
+        # Clean up response
+        response = response.replace("```json", "").replace("```", "").strip()
+        return json.loads(response)
+    
+    @staticmethod
+    async def simplify_text(
+        text: str,
+        level: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> str:
+        """Simplify text to a target CEFR level"""
+        
+        system_prompt = f"""You are a {target_language} language teacher.
+Rewrite the following text to be suitable for a learner at the {level} level.
+Keep the meaning of the story but use simpler vocabulary and grammar.
+IMPORTANT: Return ONLY the simplified text. Do not include any intro or outro."""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ]
+        
+        return await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.3
+        )
+    
+    @staticmethod
+    async def generate_comprehension_questions(
+        text: str,
+        count: int = 3,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> List[Dict[str, str]]:
+        """Generate comprehension questions for a text"""
+        
+        system_prompt = f"""You are a {target_language} language teacher.
+Read the provided text and generate {count} comprehension questions in {target_language} with their answers.
+Return ONLY a valid JSON array of objects. Each object must have a "q" field (question) and an "a" field (answer).
+Do not include any markdown formatting like ```json or ```. Just the raw JSON array.
+Example output format:
+[
+  {{"q": "Question in {target_language}?", "a": "Answer in {target_language}."}},
+  {{"q": "Question in {target_language}?", "a": "Answer in {target_language}."}}
+]"""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f'Text:\n"{text}"'}
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.7,
+            response_format="json"
+        )
+        
+        # Clean and parse
+        response = response.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(response)
+        
+        # Normalize output
+        if isinstance(parsed, list):
+            return parsed
+        elif isinstance(parsed, dict) and "questions" in parsed:
+            return parsed["questions"]
+        else:
+            raise ValueError("Unexpected response format")
+    
+    @staticmethod
+    async def explain_text(
+        text: str,
+        template: str,
+        context: str = "",
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, Any]:
+        """Explain text (grammar, sentence, or word)"""
+        
+        prompts = {
+            "grammar": f"""You are a {target_language} language teacher. Analyze the grammar in this {target_language} text:
+"{text}"
+{f'Context: "{context}"' if context else ''}
+
+Explain the grammatical structures in a clear, educational way.
+
+Return ONLY valid JSON with this structure:
+{{
+  "summary": "Brief overview of main grammatical points (1-2 sentences)",
+  "structures": [
+    {{
+      "element": "grammatical element (e.g., 'den Mann')",
+      "explanation": "what it is and why (e.g., 'Accusative case - direct object')"
+    }}
+  ],
+  "tips": ["Helpful tip 1", "Helpful tip 2"]
+}}
+Do not include markdown formatting. Just the raw JSON string.""",
+            
+            "sentence": f"""You are a {target_language} language teacher. Explain this {target_language} sentence to a learner:
+"{text}"
+{f'Context: "{context}"' if context else ''}
+
+Provide translation and breakdown.
+
+Return ONLY valid JSON with this structure:
+{{
+  "translation": "English translation of the sentence",
+  "breakdown": [
+    {{
+      "part": "word or phrase from the sentence",
+      "meaning": "its meaning/function in this context"
+    }}
+  ],
+  "notes": "Any important notes about usage, idioms, or nuances"
+}}
+Do not include markdown formatting. Just the raw JSON string.""",
+            
+            "word": f"""You are a {target_language} language teacher. Explain this {target_language} word or phrase:
+"{text}"
+{f'In context: "{context}"' if context else ''}
+
+Provide detailed explanation for a language learner.
+
+Return ONLY valid JSON with this structure:
+{{
+  "translation": "English translation",
+  "explanation": "Detailed explanation of meaning and usage",
+  "examples": [
+    {{"german": "Example sentence 1", "english": "Translation 1"}},
+    {{"german": "Example sentence 2", "english": "Translation 2"}}
+  ],
+  "tips": "Learning tips or common mistakes to avoid"
+}}
+Do not include markdown formatting. Just the raw JSON string."""
+        }
+        
+        prompt = prompts.get(template, prompts["sentence"])
+        
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": "Explain now."}
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.5,
+            response_format="json"
+        )
+        
+        # Clean and parse
+        response = response.replace("```json", "").replace("```", "").strip()
+        return json.loads(response)
+    
+    @staticmethod
+    async def analyze_writing(
+        text: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, Any]:
+        """Analyze and correct writing"""
+        
+        system_prompt = f"""You are a {target_language} language teacher correcting a student's writing.
+Analyze the provided {target_language} text.
+Return ONLY a valid JSON object with the following structure:
+{{
+  "correctedText": "The full text with all grammar and spelling errors fixed.",
+  "feedback": "A brief overall comment on the writing style and level.",
+  "rating": "A CEFR level estimate (e.g., A1, A2, B1...)",
+  "corrections": [
+    {{
+      "original": "mistaken phrase",
+      "correction": "corrected phrase",
+      "explanation": "Why it was wrong"
+    }}
+  ],
+  "suggestions": [
+    "Suggestion for better vocabulary or phrasing 1",
+    "Suggestion 2"
+  ]
+}}
+Do not include markdown formatting like ```json. Just the raw JSON object."""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.3,
+            response_format="json"
+        )
+        
+        # Clean and parse
+        response = response.replace("```json", "").replace("```", "").strip()
+        return json.loads(response)
+    
+    @staticmethod
+    async def detect_level(
+        text: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, str]:
+        """Detect CEFR level of text"""
+        
+        system_prompt = f"""You are an expert {target_language} language teacher.
+Analyze the provided text and determine its CEFR proficiency level (A1, A2, B1, B2, C1, or C2).
+
+IMPORTANT: Return ONLY a valid JSON object with EXACTLY these two fields:
+- "level": The CEFR level (e.g., "A2").
+- "reasoning": A brief explanation of why this level was chosen.
+
+Example:
+{{
+  "level": "B1",
+  "reasoning": "Uses complex sentence structures and vocabulary related to daily life."
+}}
+Do not include markdown formatting like ```json. Just the raw JSON object."""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text[:1000]}  # First 1000 chars
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.3,
+            response_format="json"
+        )
+        
+        # Clean and parse
+        response = response.replace("```json", "").replace("```", "").strip()
+        return json.loads(response)
+    
+    @staticmethod
+    async def adapt_content(
+        text: str,
+        level: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, str]:
+        """Adapt and expand content to target level"""
+        
+        system_prompt = f"""You are an expert {target_language} language teacher and editor.
+Your task is to adapt the provided text for a learner at the {level} level.
+
+The input text might be a short summary. Your goal is to EXPAND it into a full, engaging article (approx. 300-500 words).
+
+RULES:
+1. **Language**: The output MUST be in {target_language}.
+2. **Content**: 
+   - Expand the provided summary into a complete story/article.
+   - Use the summary as the core facts but elaborate on context, background, and details to make it a full narrative.
+   - Maintain the original meaning but make it longer and more engaging.
+   - IGNORE all metadata, copyright notices, headers, footers.
+3. **Difficulty**: Adapt the vocabulary and grammar strictly to CEFR level {level}.
+4. **Output Format**: You MUST return a valid JSON object with EXACTLY these two fields:
+   - "reasoning": A brief explanation (in English) of what you changed.
+   - "adapted_text": The final adapted {target_language} text (should be 300-500 words).
+
+Example JSON:
+{{
+  "reasoning": "Expanded the summary into a full article and simplified vocabulary for A2 level.",
+  "adapted_text": "Full expanded text in {target_language}..."
+}}
+Do not include markdown formatting like ```json. Just the raw JSON object."""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=messages,
+            model=model,
+            temperature=0.3,
+            response_format="json"
+        )
+        
+        # Clean and parse
+        response = response.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(response)
+        
+        return {
+            "content": parsed.get("adapted_text", parsed.get("content", parsed.get("text", response))),
+            "reasoning": parsed.get("reasoning", "No reasoning provided.")
+        }
+    
+    @staticmethod
+    async def chat_response(
+        messages: List[Dict[str, str]],
+        scenario: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> str:
+        """Generate chat response for roleplay"""
+        
+        system_prompt = f"""You are a helpful {target_language} tutor role-playing as a character in a "{scenario}" scenario.
+Your goal is to help the user practice {target_language} conversation.
+Keep your responses natural, relatively short (1-3 sentences), and suitable for a learner.
+If the user makes a mistake, you can subtly correct them in your response or just continue the conversation naturally if it's understandable.
+Do NOT break character."""
+        
+        conversation = [
+            {"role": "system", "content": system_prompt},
+            *messages
+        ]
+        
+        return await LLMService.chat_completion(
+            messages=conversation,
+            model=model,
+            temperature=0.8
+        )
+    
+    @staticmethod
+    async def generate_hints(
+        messages: List[Dict[str, str]],
+        scenario: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> List[str]:
+        """Generate conversation hints"""
+        
+        system_prompt = f"""You are a {target_language} language helper. The user is in a role-play scenario: "{scenario}".
+The user is stuck and needs a hint on what to say next.
+Read the conversation history and suggest 3 possible {target_language} responses the user could say.
+Return ONLY a valid JSON array of strings.
+Example: ["Response 1", "Response 2", "Response 3"]"""
+        
+        conversation = [
+            {"role": "system", "content": system_prompt},
+            *messages,
+            {"role": "user", "content": "I don't know what to say. Give me a hint."}
+        ]
+        
+        response = await LLMService.chat_completion(
+            messages=conversation,
+            model=model,
+            temperature=0.7,
+            response_format="json"
+        )
+        
+        # Clean and parse
+        response = response.replace("```json", "").replace("```", "").strip()
+        hints = json.loads(response)
+        
+        return hints if isinstance(hints, list) else ["Entschuldigung?", "Ich verstehe nicht.", "Können Sie das wiederholen?"]

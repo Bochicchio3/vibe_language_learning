@@ -1,24 +1,24 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
-import Layout from './components/Layout';
-import LoginView from './components/LoginView';
+import Layout from './components/layout/Layout';
+import LoginView from './components/views/LoginView';
 
-import LibraryView from './components/LibraryView';
-import ReaderView from './components/ReaderView';
-import ImportView from './components/ImportView';
-import GeneratorView from './components/GeneratorView';
-import BooksView from './components/BooksView';
-import BookDetailView from './components/BookDetailView';
-import ChapterReader from './components/ChapterReader';
-import VocabDashboard from './components/VocabDashboard';
-import FlashcardView from './components/FlashcardView';
-import SpeakingPractice from './components/SpeakingPractice';
-import WritingPractice from './components/WritingPractice';
-import GrammarView from './components/GrammarView';
-import ChatView from './components/ChatView';
-import ProgressView from './components/ProgressView';
-import ImprovementsView from './components/ImprovementsView';
+import LibraryView from './components/views/LibraryView';
+import ReaderView from './components/views/ReaderView';
+import ImportView from './components/views/ImportView';
+import GeneratorView from './components/views/GeneratorView';
+import BooksView from './components/views/BooksView';
+import BookDetailView from './components/views/BookDetailView';
+import ChapterReader from './components/views/ChapterReader';
+import VocabDashboard from './components/views/VocabDashboard';
+import FlashcardView from './components/views/FlashcardView';
+import SpeakingPractice from './components/views/SpeakingPractice';
+import WritingPractice from './components/views/WritingPractice';
+import GrammarView from './components/views/GrammarView';
+import ChatView from './components/views/ChatView';
+import ProgressView from './components/views/ProgressView';
+import ImprovementsView from './components/views/ImprovementsView';
 
 export default function AppRouter() {
     const { currentUser } = useAuth();

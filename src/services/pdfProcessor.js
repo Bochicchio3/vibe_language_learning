@@ -1,4 +1,11 @@
+/**
+ * @deprecated This service is deprecated. Document processing is now handled by the Python backend using Docling.
+ * Please use src/services/api/books.js for book uploads.
+ */
+
 import * as pdfjsLib from 'pdfjs-dist';
+
+console.warn('Using deprecated pdfProcessor.js service. Please migrate to backend API.');
 
 // Ensure worker is set up in the main app entry point, but we can double check or re-assign if needed.
 // Usually best to rely on the global worker configuration if possible, or pass it in.
