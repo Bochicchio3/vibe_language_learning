@@ -1,0 +1,201 @@
+classDiagram
+    %% User Root
+    class User {
+        string userId
+    }
+
+    %% Private Documents
+    class UserProfile {
+        string uid
+        string email
+        string displayName
+        string targetLanguage
+        string nativeLanguage
+        timestamp createdAt
+        timestamp lastActive
+        object stats
+    }
+
+    class UserSettings {
+        string theme
+        boolean ttsEnabled
+        string ttsVoice
+        boolean autoTranslate
+        string defaultLevel
+        number dailyGoal
+        object notifications
+    }
+
+    %% Private Collections
+    class Story {
+        string id
+        string title
+        string content
+        string level
+        string targetLanguage
+        string source
+        string sourceModel
+        string topic
+        number wordCount
+        boolean isRead
+        number readProgress
+        timestamp createdAt
+        timestamp lastReadAt
+        boolean isPublic
+        array tags
+        object metadata
+    }
+
+    class Book {
+        string id
+        string title
+        string author
+        string level
+        string targetLanguage
+        string originalFile
+        string fileType
+        string coverImage
+        array chapters
+        number totalChapters
+        number currentChapter
+        boolean isAdapted
+        number currentProcessingChapter
+        timestamp createdAt
+        timestamp lastReadAt
+        boolean isPublic
+        object metadata
+    }
+
+    class Vocabulary {
+        string id
+        string word
+        string definition
+        string context
+        string targetLanguage
+        string nativeLanguage
+        string gender
+        string deckId
+        string sourceType
+        string sourceId
+        object srsData
+        timestamp createdAt
+        timestamp lastReviewedAt
+        number timesReviewed
+        boolean isMastered
+    }
+
+    class Deck {
+        string id
+        string name
+        string description
+        string sourceType
+        string sourceId
+        number wordCount
+        number dueCount
+        number masteredCount
+        timestamp createdAt
+        timestamp lastStudiedAt
+    }
+
+    class Progress {
+        string id
+        string itemType
+        string itemId
+        number progress
+        boolean isCompleted
+        timestamp startedAt
+        timestamp completedAt
+        timestamp lastReadAt
+        number timeSpentMinutes
+    }
+
+    class ReadingSession {
+        string id
+        string itemType
+        string itemId
+        string itemTitle
+        timestamp startTime
+        timestamp endTime
+        number durationMinutes
+        number wordsRead
+        number newWordsEncountered
+        string date
+    }
+
+    class ChatConversation {
+        string id
+        string scenario
+        array messages
+        timestamp createdAt
+        timestamp lastMessageAt
+        number messageCount
+    }
+
+    %% Public Collections
+    class PublicStory {
+        string id
+        string authorId
+        string authorName
+        number views
+        number likes
+        timestamp publishedAt
+    }
+
+    class PublicBook {
+        string id
+        string authorId
+        string authorName
+        number downloads
+        timestamp publishedAt
+    }
+
+    class ProcessingJob {
+        string id
+        string userId
+        string jobType
+        string status
+        string targetId
+        number progress
+        string currentStep
+        number totalSteps
+        string error
+        timestamp createdAt
+        timestamp startedAt
+        timestamp completedAt
+    }
+
+    %% Relationships
+    User "1" -- "1" UserProfile : /users/{userId}/profile
+    User "1" -- "1" UserSettings : /users/{userId}/settings
+    
+    User "1" *-- "*" Story : /users/{userId}/stories
+    User "1" *-- "*" Book : /users/{userId}/books
+    User "1" *-- "*" Vocabulary : /users/{userId}/vocabulary
+    User "1" *-- "*" Deck : /users/{userId}/decks
+    User "1" *-- "*" Progress : /users/{userId}/progress
+    User "1" *-- "*" ReadingSession : /users/{userId}/reading_sessions
+    User "1" *-- "*" ChatConversation : /users/{userId}/chat_history
+
+    %% Logical Links
+    Vocabulary --> Deck : belongs to
+    Vocabulary ..> Story : source (optional)
+    Vocabulary ..> Book : source (optional)
+    
+    PublicStory --|> Story : extends (Shared Structure)
+    PublicBook --|> Book : extends (Shared Structure)
+    
+    ProcessingJob ..> User : owned by
+
+    %% Navigation Links
+    click UserProfile href "#user-profile" "Go to User Profile"
+    click UserSettings href "#user-settings" "Go to User Settings"
+    click Story href "#stories-collection-private" "Go to Stories (Private)"
+    click Book href "#books-collection-private" "Go to Books (Private)"
+    click Vocabulary href "#vocabulary-collection" "Go to Vocabulary"
+    click Deck href "#decks-collection" "Go to Decks"
+    click Progress href "#progress-collection" "Go to Progress"
+    click ReadingSession href "#reading-sessions-collection" "Go to Reading Sessions"
+    click ChatConversation href "#chat-history-collection" "Go to Chat History"
+    click PublicStory href "#stories-collection-public" "Go to Stories (Public)"
+    click PublicBook href "#books-collection-public" "Go to Books (Public)"
+    click ProcessingJob href "#processing-queue-collection" "Go to Processing Queue"

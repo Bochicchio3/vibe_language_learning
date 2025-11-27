@@ -11,13 +11,23 @@ export default function NewsModal({ onClose, onSaveText }) {
     const [models, setModels] = useState([]);
     const [selectedModel, setSelectedModel] = useState('');
     const [error, setError] = useState(null);
-
-    const categories = getCategories();
+    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
+        loadCategories();
         loadNews(category);
         loadModels();
     }, []);
+
+    const loadCategories = async () => {
+        try {
+            const cats = await getCategories();
+            setCategories(cats);
+        } catch (e) {
+            console.error("Failed to load categories", e);
+            setCategories(['General', 'Technology', 'Business', 'Science', 'Health', 'Sports', 'Entertainment']); // Fallback
+        }
+    };
 
     const loadModels = async () => {
         try {

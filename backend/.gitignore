@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Environment
+.env
+.env.local
+
+# Uploads
+uploads/
+*.pdf
+*.epub
+
+# Firebase
+firebase-credentials.json
+firebase-debug.log
+credentials.json
+serviceAccountKey.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Redis
+dump.rdb

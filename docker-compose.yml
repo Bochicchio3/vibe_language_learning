@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # Python Backend
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./backend:/app
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - DEFAULT_LLM_MODEL=ollama/gemma3:27b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      # - ollama # Using system Ollama
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+  # React Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_TARGET=http://backend:8001
+    depends_on:
+      - backend
+    command: npm run dev -- --host
+
+  # Celery Worker
+  worker:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - DEFAULT_LLM_MODEL=ollama/gemma3:27b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      - backend
+      # - ollama # Using system Ollama
+    command: celery -A celery_worker worker --loglevel=info
+
+  # Redis for Queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Flower (Celery Monitoring)
+  flower:
+    image: mher/flower
+    ports:
+      - "5555:5555"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - worker
+
+  # MkDocs (Documentation)
+  mkdocs:
+    build:
+      context: .
+      dockerfile: Dockerfile.docs
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./:/docs
+    command: serve --dev-addr=0.0.0.0:8000
+
+  # Ollama (AI Engine) - DISABLED (Using System Ollama for GPU)
+  # ollama:
+  #   image: ollama/ollama
+  #   ports:
+  #     - "11435:11434"
+  #   volumes:
+  #     - /usr/share/ollama/.ollama:/root/.ollama
+
+volumes:
+  ollama_data:

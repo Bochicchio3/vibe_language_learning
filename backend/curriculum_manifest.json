@@ -1,0 +1,476 @@
+[
+  {
+    "title": "Personal Pronouns",
+    "topic": "pronouns",
+    "description": "Ich, du, er, sie, es, wir, ihr, Sie - Nominative and Accusative.",
+    "level": "A1"
+  },
+  {
+    "title": "Verb Conjugation (Present Tense)",
+    "topic": "verbConjugation",
+    "description": "Regular and irregular verbs in the present tense.",
+    "level": "A1"
+  },
+  {
+    "title": "Simple Sentence Structure",
+    "topic": "syntax",
+    "description": "Subject-Verb-Object word order.",
+    "level": "A1"
+  },
+  {
+    "title": "Definite and Indefinite Articles",
+    "topic": "articles",
+    "description": "Der, die, das, ein, eine, and their usage.",
+    "level": "A1"
+  },
+  {
+    "title": "Nominative and Accusative Cases",
+    "topic": "cases",
+    "description": "Understanding and using the Nominative and Accusative cases.",
+    "level": "A1"
+  },
+  {
+    "title": "Basic Prepositions (Accusative)",
+    "topic": "prepositions",
+    "description": "Common prepositions governing the accusative case (e.g., f\u00fcr, mit, durch).",
+    "level": "A1"
+  },
+  {
+    "title": "Possessive Pronouns",
+    "topic": "pronouns",
+    "description": "Mein, dein, sein, ihr, unser, euer, Ihr - possessive pronouns and their declension.",
+    "level": "A1"
+  },
+  {
+    "title": "Modal Verbs (k\u00f6nnen, m\u00fcssen, wollen)",
+    "topic": "verbConjugation",
+    "description": "Basic usage of modal verbs with infinitive constructions.",
+    "level": "A1"
+  },
+  {
+    "title": "Question Words",
+    "topic": "syntax",
+    "description": "Wer, was, wo, wann, wie, warum - forming basic questions.",
+    "level": "A1"
+  },
+  {
+    "title": "Adjective Declension (Basic)",
+    "topic": "adjectiveDeclenstion",
+    "description": "Basic adjective endings with definite articles.",
+    "level": "A1"
+  },
+  {
+    "title": "Numbers and Counting",
+    "topic": "vocabulary",
+    "description": "Numbers 1-100 and their usage in simple contexts.",
+    "level": "A1"
+  },
+  {
+    "title": "Greetings and Introductions",
+    "topic": "vocabulary",
+    "description": "Common phrases for greetings, introductions, and farewells.",
+    "level": "A1"
+  },
+  {
+    "title": "Word Order in Simple Sentences",
+    "topic": "wordOrder",
+    "description": "Subject-Verb-Object and time/manner adverbials.",
+    "level": "A1"
+  },
+  {
+    "title": "Present Tense Verbs",
+    "topic": "verbConjugation",
+    "description": "Regular and irregular verbs in the present tense; modal verbs.",
+    "level": "A2"
+  },
+  {
+    "title": "Past Tense (Pr\u00e4teritum & Perfekt)",
+    "topic": "verbConjugation",
+    "description": "Formation and use of Pr\u00e4teritum (weak & strong verbs) and Perfekt.",
+    "level": "A2"
+  },
+  {
+    "title": "Personal Pronouns",
+    "topic": "pronouns",
+    "description": "Nominative, accusative, dative, and genitive personal pronouns.",
+    "level": "A2"
+  },
+  {
+    "title": "Possessive Pronouns",
+    "topic": "pronouns",
+    "description": "Possessive pronouns and their declension.",
+    "level": "A2"
+  },
+  {
+    "title": "Definite and Indefinite Articles",
+    "topic": "articles",
+    "description": "Correct use of der, die, das, ein, eine, and kein(e).",
+    "level": "A2"
+  },
+  {
+    "title": "Accusative Case",
+    "topic": "cases",
+    "description": "Understanding and using the accusative case with verbs and prepositions.",
+    "level": "A2"
+  },
+  {
+    "title": "Dative Case",
+    "topic": "cases",
+    "description": "Understanding and using the dative case with verbs and prepositions.",
+    "level": "A2"
+  },
+  {
+    "title": "Prepositions (Accusative & Dative)",
+    "topic": "prepositions",
+    "description": "Common prepositions governing accusative and dative cases.",
+    "level": "A2"
+  },
+  {
+    "title": "Adjective Declension (Basic)",
+    "topic": "adjectiveDeclenstion",
+    "description": "Weak and mixed declension after definite and indefinite articles.",
+    "level": "A2"
+  },
+  {
+    "title": "Word Order in Main Clauses",
+    "topic": "wordOrder",
+    "description": "Standard word order (subject-verb-object) and position of time/manner adverbs.",
+    "level": "A2"
+  },
+  {
+    "title": "Simple Sentence Structure",
+    "topic": "syntax",
+    "description": "Building simple sentences with conjunctions (und, oder, aber).",
+    "level": "A2"
+  },
+  {
+    "title": "Modal Verbs (k\u00f6nnen, m\u00fcssen, sollen, d\u00fcrfen, wollen, m\u00f6gen)",
+    "topic": "verbConjugation",
+    "description": "Usage and meaning of common modal verbs.",
+    "level": "A2"
+  },
+  {
+    "title": "Time Expressions",
+    "topic": "vocabulary",
+    "description": "Vocabulary related to days, months, seasons, and telling time.",
+    "level": "A2"
+  },
+  {
+    "title": "Past Tenses (Pr\u00e4teritum & Perfekt)",
+    "topic": "verbConjugation",
+    "description": "Formation and usage of Pr\u00e4teritum and Perfekt to describe past events.",
+    "level": "B1"
+  },
+  {
+    "title": "Modal Verbs",
+    "topic": "verbConjugation",
+    "description": "Usage and conjugation of common modal verbs (k\u00f6nnen, m\u00fcssen, sollen, d\u00fcrfen, wollen, m\u00f6gen).",
+    "level": "B1"
+  },
+  {
+    "title": "Subjunctive II (Konjunktiv II)",
+    "topic": "verbConjugation",
+    "description": "Formation and use for polite requests, hypothetical situations, and indirect speech.",
+    "level": "B1"
+  },
+  {
+    "title": "Relative Clauses",
+    "topic": "syntax",
+    "description": "Forming and using relative clauses with relative pronouns (der, die, das, welcher, welche, welches).",
+    "level": "B1"
+  },
+  {
+    "title": "Passive Voice",
+    "topic": "syntax",
+    "description": "Formation and use of the passive voice (werden + past participle).",
+    "level": "B1"
+  },
+  {
+    "title": "Adjective Declension (with and without definite article)",
+    "topic": "adjectiveDeclenstion",
+    "description": "Correct declension of adjectives based on gender, number, and case.",
+    "level": "B1"
+  },
+  {
+    "title": "Prepositions with Accusative, Dative, and Genitive",
+    "topic": "prepositions",
+    "description": "Understanding and using prepositions with the correct case.",
+    "level": "B1"
+  },
+  {
+    "title": "Cases (Nominative, Accusative, Dative, Genitive)",
+    "topic": "cases",
+    "description": "Reinforcement of case usage in various sentence structures.",
+    "level": "B1"
+  },
+  {
+    "title": "Pronouns (Possessive, Demonstrative, Relative)",
+    "topic": "pronouns",
+    "description": "Correct usage of different types of pronouns.",
+    "level": "B1"
+  },
+  {
+    "title": "Word Order in Main and Subordinate Clauses",
+    "topic": "wordOrder",
+    "description": "Understanding and applying correct word order, including verb placement.",
+    "level": "B1"
+  },
+  {
+    "title": "Articles (Definite, Indefinite, Zero Article)",
+    "topic": "articles",
+    "description": "Correct use of articles with nouns.",
+    "level": "B1"
+  },
+  {
+    "title": "Conjunctions (and, but, or, because, that)",
+    "topic": "syntax",
+    "description": "Using conjunctions to connect clauses and express relationships.",
+    "level": "B1"
+  },
+  {
+    "title": "Indirect Speech (reported speech)",
+    "topic": "syntax",
+    "description": "Reporting what someone else said using Konjunktiv II and appropriate conjunctions.",
+    "level": "B1"
+  },
+  {
+    "title": "Subjunctive II & III",
+    "topic": "verbConjugation",
+    "description": "Formation and use of Konjunktiv II and III for hypothetical situations, indirect speech, and polite requests.",
+    "level": "B2"
+  },
+  {
+    "title": "Passive Voice",
+    "topic": "syntax",
+    "description": "Formation and use of the passive voice in various tenses.",
+    "level": "B2"
+  },
+  {
+    "title": "Relative Clauses",
+    "topic": "syntax",
+    "description": "Complex sentence structures using relative pronouns and clauses.",
+    "level": "B2"
+  },
+  {
+    "title": "Noun Clauses",
+    "topic": "syntax",
+    "description": "Using noun clauses with 'dass', 'ob', and 'wie'.",
+    "level": "B2"
+  },
+  {
+    "title": "Prepositions with Accusative, Dative, and Genitive",
+    "topic": "prepositions",
+    "description": "Advanced usage and nuances of German prepositions and case selection.",
+    "level": "B2"
+  },
+  {
+    "title": "Adjective Declension (Mixed and Strong)",
+    "topic": "adjectiveDeclenstion",
+    "description": "Complete mastery of adjective declension after definite, indefinite, and no articles.",
+    "level": "B2"
+  },
+  {
+    "title": "Pronoun Usage (Relative, Possessive, Demonstrative)",
+    "topic": "pronouns",
+    "description": "Advanced use of pronouns in complex sentences.",
+    "level": "B2"
+  },
+  {
+    "title": "Word Order in Subordinate Clauses",
+    "topic": "wordOrder",
+    "description": "Correct placement of verbs and other sentence elements in subordinate clauses.",
+    "level": "B2"
+  },
+  {
+    "title": "Nominalization",
+    "topic": "syntax",
+    "description": "Turning verbs into nouns and using them in sentences.",
+    "level": "B2"
+  },
+  {
+    "title": "Cases (Dative after Verbs)",
+    "topic": "cases",
+    "description": "Advanced understanding of dative case usage with verbs.",
+    "level": "B2"
+  },
+  {
+    "title": "Modal Particles",
+    "topic": "vocabulary",
+    "description": "Understanding and using modal particles (e.g., doch, aber, dann) to express nuance.",
+    "level": "B2"
+  },
+  {
+    "title": "Prefix Verbs (Trennbare & Untrennbare)",
+    "topic": "vocabulary",
+    "description": "Advanced usage and understanding of separable and inseparable verbs.",
+    "level": "B2"
+  },
+  {
+    "title": "German Cultural Nuances",
+    "topic": "culture",
+    "description": "Understanding cultural contexts affecting language use.",
+    "level": "B2"
+  },
+  {
+    "title": "Subjunctive II & III",
+    "topic": "verbConjugation",
+    "description": "Mastery of Konjunktiv II for unreal conditions and polite requests; understanding and using Konjunktiv III.",
+    "level": "C1"
+  },
+  {
+    "title": "Passive Voice (Advanced)",
+    "topic": "syntax",
+    "description": "Nuanced use of passive constructions, including statal and dynamic passives.",
+    "level": "C1"
+  },
+  {
+    "title": "Noun & Adjective Declension (Complex Cases)",
+    "topic": "adjectiveDeclenstion",
+    "description": "Accurate declension in all cases, including mixed constructions and after prepositions.",
+    "level": "C1"
+  },
+  {
+    "title": "Prepositions with Accusative, Dative, Genitive",
+    "topic": "prepositions",
+    "description": "Advanced understanding of preposition usage and case governance.",
+    "level": "C1"
+  },
+  {
+    "title": "Relative Clauses (Advanced)",
+    "topic": "syntax",
+    "description": "Complex relative clause constructions and relative pronouns.",
+    "level": "C1"
+  },
+  {
+    "title": "Nominalization",
+    "topic": "syntax",
+    "description": "Forming nouns from verbs and adjectives; using nominalized constructions effectively.",
+    "level": "C1"
+  },
+  {
+    "title": "Partizipial Constructions",
+    "topic": "syntax",
+    "description": "Using Partizip I and II as adjectival modifiers and in adverbial clauses.",
+    "level": "C1"
+  },
+  {
+    "title": "Modal Particles",
+    "topic": "vocabulary",
+    "description": "Understanding and correctly using modal particles (e.g., doch, eigentlich, ja) to convey nuance.",
+    "level": "C1"
+  },
+  {
+    "title": "Indirect Speech (Advanced)",
+    "topic": "syntax",
+    "description": "Reporting speech with complex tenses and subordinate clauses.",
+    "level": "C1"
+  },
+  {
+    "title": "Complex Sentence Structures",
+    "topic": "syntax",
+    "description": "Combining multiple clauses effectively for complex arguments and narratives.",
+    "level": "C1"
+  },
+  {
+    "title": "Pronoun Variation",
+    "topic": "pronouns",
+    "description": "Mastery of all pronoun types (relative, demonstrative, possessive, etc.) and their correct usage.",
+    "level": "C1"
+  },
+  {
+    "title": "Word Order in Complex Sentences",
+    "topic": "wordOrder",
+    "description": "Applying correct word order rules in main and subordinate clauses, including inverted word order.",
+    "level": "C1"
+  },
+  {
+    "title": "German-Specific Idioms & Fixed Expressions",
+    "topic": "vocabulary",
+    "description": "Extensive knowledge of idioms and fixed expressions for natural and fluent communication.",
+    "level": "C1"
+  },
+  {
+    "title": "Cultural Nuances in Language",
+    "topic": "culture",
+    "description": "Understanding how cultural context influences language use and interpretation.",
+    "level": "C1"
+  },
+  {
+    "title": "Subjunctive II & III Mastery",
+    "topic": "verbConjugation",
+    "description": "Nuanced use of Konjunktiv II and III for hypothetical situations, indirect speech, and polite requests.",
+    "level": "C2"
+  },
+  {
+    "title": "N-Genitive Revival & Complex Structures",
+    "topic": "cases",
+    "description": "Advanced use of the Genitive case, including its re-emergence in formal contexts and complex noun phrases.",
+    "level": "C2"
+  },
+  {
+    "title": "Modal Particle Usage",
+    "topic": "syntax",
+    "description": "Precise application of modal particles (e.g., doch, eben, ja) to convey subtle meanings and speaker attitude.",
+    "level": "C2"
+  },
+  {
+    "title": "Complex Sentence Structures",
+    "topic": "syntax",
+    "description": "Mastery of advanced relative, causal, conditional, and concessive clauses, including nested structures.",
+    "level": "C2"
+  },
+  {
+    "title": "Passive Voice Variations",
+    "topic": "syntax",
+    "description": "Understanding and using all forms of the passive voice, including the 'werden' and 'sein' passives, and the impersonal passive.",
+    "level": "C2"
+  },
+  {
+    "title": "Nominalization & Substantivierung",
+    "topic": "syntax",
+    "description": "Converting verbs, adjectives, and adverbs into nouns and using them effectively in complex sentences.",
+    "level": "C2"
+  },
+  {
+    "title": "Prepositional Phrases & Idioms",
+    "topic": "prepositions",
+    "description": "Advanced use of prepositions with specific verbs and nouns, including idiomatic expressions.",
+    "level": "C2"
+  },
+  {
+    "title": "Reflexive Verbs & Pronouns",
+    "topic": "pronouns",
+    "description": "Nuances of reflexive verbs, including reciprocal and passive reflexive constructions.",
+    "level": "C2"
+  },
+  {
+    "title": "Adjective Declension (All Cases)",
+    "topic": "adjectiveDeclenstion",
+    "description": "Complete mastery of adjective declension in all cases, including mixed declensions and attributive/predicative adjectives.",
+    "level": "C2"
+  },
+  {
+    "title": "Word Order Variations",
+    "topic": "wordOrder",
+    "description": "Understanding and applying flexible word order for emphasis, stylistic effect, and complex sentence structures.",
+    "level": "C2"
+  },
+  {
+    "title": "Articles with Abstract Nouns",
+    "topic": "articles",
+    "description": "Correct use of articles with general and abstract nouns in complex contexts.",
+    "level": "C2"
+  },
+  {
+    "title": "Formal vs. Informal Language",
+    "topic": "culture",
+    "description": "Distinguishing between formal and informal registers and adapting language accordingly.",
+    "level": "C2"
+  },
+  {
+    "title": "Technical & Specialized Vocabulary",
+    "topic": "vocabulary",
+    "description": "Expanding vocabulary in specific fields (e.g., law, science, economics).",
+    "level": "C2"
+  }
+]
