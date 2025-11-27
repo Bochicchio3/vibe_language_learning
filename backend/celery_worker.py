@@ -14,6 +14,7 @@ from services.queue import (
     generate_concept_card_task,
     generate_exercises_task,
     generate_context_card_task,
+    generate_story_task,
 )
 
 if __name__ == '__main__':

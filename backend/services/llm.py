@@ -29,6 +29,13 @@ class LLMService:
     """Service for interacting with various LLM providers"""
     
     @staticmethod
+    def _ensure_model_prefix(model: str) -> str:
+        """Helper to ensure model has correct prefix"""
+        if model and "/" not in model and not model.startswith(("gpt-", "claude-", "gemini-")):
+            return f"ollama/{model}"
+        return model
+
+    @staticmethod
     async def chat_completion(
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
@@ -109,13 +116,37 @@ Do not include markdown formatting (like ```json) in the response. Just the raw 
         response = await LLMService.chat_completion(
             messages=messages,
             model=model,
-            temperature=0.7,
-            response_format="json"
+            temperature=0.7
+            # response_format="json" # Removed to avoid litellm/ollama issues
         )
         
         # Clean up response
         response = response.replace("```json", "").replace("```", "").strip()
-        return json.loads(response)
+        
+        # Remove <think> tags if present
+        if "<think>" in response:
+            import re
+            response = re.sub(r'<think>.*?</think>', '', response, flags=re.DOTALL).strip()
+            
+        # Sanitize control characters that might break JSON parsing
+        # Replace unescaped newlines within strings if possible, or just rely on strict=False
+        # A simple way to handle newlines in JSON values is to rely on the LLM to escape them, 
+        # but sometimes they don't.
+        
+        try:
+            return json.loads(response, strict=False)
+        except json.JSONDecodeError:
+            # Fallback: Try to escape newlines that might be causing issues
+            # This is a naive fix but often works for simple LLM outputs
+            try:
+                import re
+                # Attempt to fix unescaped newlines inside quotes? 
+                # Actually, let's just try to parse it again with a more lenient approach if available
+                # or just log the error and return a partial object
+                print(f"JSON Parse Error. Raw response: {response}")
+                raise
+            except Exception:
+                raise
     
     @staticmethod
     async def simplify_text(
@@ -691,5 +722,69 @@ Do not include markdown formatting like ```json. Just the raw JSON object.
         except Exception as e:
             print(f"Error generating context card: {e}")
             raise e
+
+    @staticmethod
+    async def generate_curriculum(level: str, model: str = None) -> dict:
+        """
+        Generates a list of grammar topics for a specific CEFR level.
+        Returns a dictionary with a list of topics.
+        """
+        model = model or config.DEFAULT_LLM_MODEL
+        model = LLMService._ensure_model_prefix(model)
+        
+        system_prompt = f"""
+You are an expert German language curriculum designer.
+List the most important grammar topics for CEFR Level {level}.
+
+Return ONLY a JSON object with this exact structure:
+{{
+  "level": "{level}",
+  "topics": [
+    {{
+      "title": "Topic Title (e.g. Present Tense Verbs)",
+      "topic": "technical_topic_id (e.g. verbConjugation)",
+      "description": "Brief description of what is covered"
+    }}
+  ]
+}}
+
+Guidelines:
+- Include 10-15 key topics for this level.
+- "topic" field should be one of: articles, verbConjugation, pronouns, prepositions, adjectiveDeclension, wordOrder, cases, syntax, culture, vocabulary.
+- Be concise.
+"""
+        
+        try:
+            response = await LLMService.chat_completion(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Generate the grammar curriculum for {level}."}
+                ],
+                temperature=0.7
+            )
+            
+            response = await LLMService.chat_completion(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Generate the grammar curriculum for {level}."}
+                ],
+                temperature=0.7
+            )
+            
+            content = response
+            # Clean up potential markdown formatting
+            content = content.replace("```json", "").replace("```", "").strip()
+            
+            # Handle <think> tags if present
+            import re
+            content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+            
+            return json.loads(content)
+            
+        except Exception as e:
+            print(f"Error generating curriculum for {level}: {e}")
+            return {"level": level, "topics": []}
 
 

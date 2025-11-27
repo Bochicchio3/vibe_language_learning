@@ -143,11 +143,15 @@ The application follows a **client-server architecture**:
 - **`requirements.txt`**: Python dependencies.
 - **`README.md`**: Backend setup and deployment instructions.
 
+### Scripts (`backend/scripts/`)
+- **`generate_batch_grammar.py`**: CLI for batch grammar generation (Discovery & Generation phases).
+- **`seed_grammar.py`**: Utility for seeding single grammar topics.
+
 ### Services (`backend/services/`)
-- **`llm.py`**: LLM service using LiteLLM for unified interface (Ollama, OpenAI, Anthropic, Gemini).
+- **`llm.py`**: Interface for LLM providers (Ollama, OpenAI, etc.).
+- **`firebase_service.py`**: Firebase Admin SDK initialization.
 - **`document_processor.py`**: PDF/EPUB processing with Docling.
 - **`news_parser.py`**: RSS feed fetching and article content extraction.
-- **`firebase_service.py`**: Firebase Admin SDK integration (TODO).
 - **`queue.py`**: Celery task queue for background processing (TODO).
 
 ### Routes (`backend/routes/`)

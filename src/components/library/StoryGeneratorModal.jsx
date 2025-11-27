@@ -3,8 +3,7 @@ import { Sparkles, Loader2, CheckCircle, X } from 'lucide-react';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../contexts/AuthContext';
-import { generateStory as generateGeminiStory } from '../../services/gemini';
-import { generateStory as generateOllamaStory, fetchModels as fetchOllamaModels } from '../../services/ollama';
+import api from '../../services/api/stories';
 
 export default function StoryGeneratorModal({ onClose, initialTopic = '' }) {
     const { currentUser } = useAuth();
@@ -19,28 +18,31 @@ export default function StoryGeneratorModal({ onClose, initialTopic = '' }) {
     const [generatedStory, setGeneratedStory] = useState(null);
 
     useEffect(() => {
-        if (provider === 'ollama') {
-            fetchOllamaModels().then(models => {
-                setOllamaModels(models);
-                if (models.length > 0 && !selectedOllamaModel) {
-                    setSelectedOllamaModel(models[0].name);
-                }
-            });
-        }
-    }, [provider]);
+        // Fetch models from backend
+        api.getModels().then(models => {
+            // Filter for Ollama models if needed, or just use all
+            // The backend returns a list of models with 'provider' field
+            const ollama = models.filter(m => m.provider === 'ollama');
+            setOllamaModels(ollama);
+
+            if (ollama.length > 0 && !selectedOllamaModel) {
+                setSelectedOllamaModel(ollama[0].name);
+            }
+        });
+    }, []);
 
     const handleGenerate = async (e) => {
         e.preventDefault();
         setGenerating(true);
         setGeneratedStory(null);
         try {
-            let story;
-            if (provider === 'gemini') {
-                story = await generateGeminiStory(topic, level, length, theme);
-            } else {
-                if (!selectedOllamaModel) throw new Error("No Ollama model selected");
-                story = await generateOllamaStory(topic, level, length, theme, selectedOllamaModel);
-            }
+            const story = await api.generateStory({
+                topic,
+                level,
+                length,
+                theme,
+                model: provider === 'ollama' ? selectedOllamaModel : null
+            });
             setGeneratedStory(story);
         } catch (error) {
             console.error("Generation error:", error);

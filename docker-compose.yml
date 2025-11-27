@@ -17,11 +17,13 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - FIREBASE_CREDENTIALS_PATH=/app/firebase-credentials.json
-      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
       - DEFAULT_LLM_MODEL=ollama/gemma3:27b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - redis
-      - ollama
+      # - ollama # Using system Ollama
     command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 
   # React Frontend
@@ -51,12 +53,14 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - DEFAULT_LLM_MODEL=ollama/gemma:27b
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - DEFAULT_LLM_MODEL=ollama/gemma3:27b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - redis
       - backend
-      - ollama
+      # - ollama # Using system Ollama
     command: celery -A celery_worker worker --loglevel=info
 
   # Redis for Queue
@@ -87,13 +91,13 @@ services:
       - ./:/docs
     command: serve --dev-addr=0.0.0.0:8000
 
-  # Ollama (AI Engine)
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11435:11434"
-    volumes:
-      - /home/alfredo/.ollama:/root/.ollama
+  # Ollama (AI Engine) - DISABLED (Using System Ollama for GPU)
+  # ollama:
+  #   image: ollama/ollama
+  #   ports:
+  #     - "11435:11434"
+  #   volumes:
+  #     - /usr/share/ollama/.ollama:/root/.ollama
 
 volumes:
   ollama_data:

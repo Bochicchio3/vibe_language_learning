@@ -18,7 +18,7 @@ class Config:
     
     # LLM Configuration
     # Default model for story generation, chat, etc.
-    DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "ollama/llama3.2")
+    DEFAULT_LLM_MODEL = os.getenv("DEFAULT_LLM_MODEL", "ollama/gemma3:27b")
     
     # Ollama
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

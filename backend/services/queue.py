@@ -223,3 +223,21 @@ def generate_context_card_task(topic: str, level: str, model: str = None, target
         return {'error': str(e)}
 
 
+@celery_app.task(name='generate_story_task')
+def generate_story_task(topic: str, level: str, length: str, theme: str = "", model: str = None, target_language: str = "German"):
+    """Generate story in background"""
+    from services.llm import LLMService
+    import asyncio
+    
+    try:
+        result = asyncio.run(LLMService.generate_story(
+            topic=topic,
+            level=level,
+            length=length,
+            theme=theme,
+            model=model,
+            target_language=target_language
+        ))
+        return result
+    except Exception as e:
+        return {'error': str(e)}

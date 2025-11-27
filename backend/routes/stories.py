@@ -33,9 +33,46 @@ class GenerateQuestionsRequest(BaseModel):
     target_language: str = "German"
 
 
+from services.queue import generate_story_task, get_task_status
+
+class JobResponse(BaseModel):
+    job_id: str
+    status: str
+
+
+@router.get("/models")
+async def get_models():
+    """Get available LLM models"""
+    try:
+        models = await LLMService.get_available_models()
+        return models
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate_async", response_model=JobResponse)
+async def generate_story_async(request: GenerateStoryRequest):
+    """Generate a language learning story (Async)"""
+    task = generate_story_task.delay(
+        topic=request.topic,
+        level=request.level,
+        length=request.length,
+        theme=request.theme,
+        model=request.model,
+        target_language=request.target_language
+    )
+    return {"job_id": task.id, "status": "pending"}
+
+
+@router.get("/status/{job_id}")
+async def get_status(job_id: str):
+    """Get status of a background job"""
+    return get_task_status(job_id)
+
+
 @router.post("/generate")
 async def generate_story(request: GenerateStoryRequest):
-    """Generate a language learning story"""
+    """Generate a language learning story (Sync - Deprecated)"""
     try:
         result = await LLMService.generate_story(
             topic=request.topic,
