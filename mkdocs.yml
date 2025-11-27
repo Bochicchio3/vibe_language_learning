@@ -1,0 +1,77 @@
+site_name: Vibe Language Learning
+site_description: Documentation for the Vibe Language Learning platform
+site_author: Vibe Team
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - scheme: default
+      primary: teal
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: teal
+      accent: lime
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [backend]
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Setup Guide: getting_started/setup.md
+    - Feature Workflow: getting_started/feature_workflow.md
+    - Repository Structure: getting_started/repository_structure.md
+  - Architecture:
+    - Backend Overview: architecture/backend_summary.md
+    - API Design: architecture/api_design.md
+    - Content Gen Map: architecture/content_generation_map.md
+    - Prompt Registry: architecture/prompt_registry.md
+    - Grammar Feature Plan: architecture/grammar_feature_plan.md
+    - Interaction Map: architecture/interaction_map.md
+    - Database Schema: architecture/database_schema.md
+  - Testing:
+    - Visual Behavior: testing/visual_behavior_tests.md
+    - Backend Tests: testing/backend_testing.md
+    - E2E Scenarios: testing/detailed_e2e_tests.md
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/svg-pan-zoom.min.js
+  - javascripts/mermaid_zoom.js

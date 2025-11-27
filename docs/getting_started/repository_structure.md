@@ -109,9 +109,16 @@ The application follows a **client-server architecture**:
 
 #### Grammar Components (`src/components/grammar/`)
 - **`GrammarTopicCard.jsx`**: Card displaying a grammar topic summary.
-- **`GrammarLesson.jsx`**: Interactive grammar lesson component.
-- **`GrammarExercise.jsx`**: Interactive grammar exercise component.
+- **`GrammarLesson.jsx`**: Interactive grammar lesson container with tabs (Concept, Context, Exercises).
+- **`GrammarExercise.jsx`**: Interactive grammar exercise manager.
+- **`ConceptCard.jsx`**: Displays grammar theory and examples.
+- **`ContextCard.jsx`**: Displays grammar in context (story) with highlights.
 - **`GrammarLevelSelector.jsx`**: Component to select grammar difficulty.
+- **`exercises/`**: Directory for specific exercise types:
+    - **`ExerciseRenderer.jsx`**: Polymorphic renderer for exercises.
+    - **`MultipleChoice.jsx`**: Multiple choice question component.
+    - **`GapFill.jsx`**: Gap fill exercise component.
+    - **`Reorder.jsx`**: Sentence reordering component.
 
 #### Vocabulary Components (`src/components/vocabulary/`)
 - **`Flashcard.jsx`**: Single flashcard component with flip animation.
@@ -148,7 +155,10 @@ The application follows a **client-server architecture**:
 - **`news.py`**: News fetching and adaptation endpoints.
 - **`chat.py`**: Chat, hints, and writing analysis endpoints.
 - **`books.py`**: Book upload and processing endpoints (TODO).
-- **`grammar.py`**: Grammar explanation and exercise endpoints (TODO).
+- **`grammar.py`**: Grammar explanation, exercise generation, and context card endpoints.
+
+### Models (`backend/models/`)
+- **`grammar.py`**: Pydantic models for grammar concepts, exercises, and context cards.
 
 ### Tests (`backend/tests/`)
 - **`unit/`**: Unit tests for backend services.

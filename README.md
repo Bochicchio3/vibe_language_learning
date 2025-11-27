@@ -19,7 +19,22 @@ This application uses a **client-server architecture**:
 - Firebase account
 - Ollama (optional, for local AI)
 
-### Frontend Setup
+### Quick Start (Docker) - Recommended
+
+Run the entire stack (Frontend, Backend, Database, Queue, AI) with one command:
+
+```bash
+docker compose up --build
+```
+
+Services available at:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8001
+- **Documentation**: http://localhost:8080
+- **Flower (Queue Monitor)**: http://localhost:5555
+- **Ollama (AI)**: http://localhost:11435
+
+### Manual Setup (Local Dev)
 
 1. **Install dependencies**:
    ```bash

@@ -51,6 +51,10 @@ class LLMService:
         """
         model = model or config.DEFAULT_LLM_MODEL
         
+        # Auto-prefix ollama if not specified
+        if model and "/" not in model and not model.startswith(("gpt-", "claude-", "gemini-")):
+            model = f"ollama/{model}"
+            
         kwargs = {
             "model": model,
             "messages": messages,
@@ -502,3 +506,190 @@ Example: ["Response 1", "Response 2", "Response 3"]"""
             models.append({"name": config.DEFAULT_LLM_MODEL, "provider": "unknown"})
             
         return models
+
+    @staticmethod
+    async def generate_concept_card(
+        topic: str,
+        level: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, Any]:
+        """
+        Generate a grammar concept card
+        """
+        system_prompt = f"""
+You are an expert {target_language} teacher. Create a "Concept Card" for the grammar topic: "{topic}" (Level {level}).
+
+Return ONLY valid JSON with this structure:
+{{
+  "meta": {{
+    "topic": "{topic}",
+    "level": "{level}"
+  }},
+  "overview": "2-3 simple sentences explaining the concept",
+  "form": {{
+    "type": "table",
+    "headers": ["Header 1", "Header 2"],
+    "rows": [["Row 1 Col 1", "Row 1 Col 2"]]
+  }},
+  "usage": ["Bullet point 1", "Bullet point 2"],
+  "examples": [
+    {{ "german": "Example sentence", "english": "Translation", "note": "Explanation" }}
+  ],
+  "common_mistakes": [
+    {{ "mistake": "Wrong sentence", "correction": "Correct sentence", "explanation": "Why it was wrong" }}
+  ],
+  "mini_quiz": [
+    {{ "question": "Quiz question?", "options": ["Option A", "Option B"], "correct": 0 }}
+  ]
+}}
+Do not include markdown formatting like ```json. Just the raw JSON object.
+"""
+
+        try:
+            response = await LLMService.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Generate the concept card."}
+                ],
+                model=model
+                # response_format="json" # Removed to avoid litellm/ollama issues
+            )
+            
+            # Clean up response
+            content = response.replace("```json", "").replace("```", "").strip()
+            
+            # Remove <think> tags if present
+            if "<think>" in content:
+                import re
+                content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                
+            return json.loads(content)
+            
+        except Exception as e:
+            print(f"Error generating concept card: {e}")
+            raise e
+
+    @staticmethod
+    async def generate_exercises(
+        topic: str,
+        level: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, Any]:
+        """
+        Generate grammar exercises
+        """
+        system_prompt = f"""
+You are an expert {target_language} teacher. Create 5 exercises for the grammar topic: "{topic}" (Level {level}).
+Include a mix of: Multiple Choice, Gap Fill, and Sentence Reordering.
+
+Return ONLY valid JSON with this structure:
+{{
+  "exercises": [
+    {{
+      "type": "multiple_choice",
+      "question": "Question text...",
+      "options": ["Option A", "Option B", "Option C"],
+      "correct": 0,
+      "explanation": "Why this is correct"
+    }},
+    {{
+      "type": "gap_fill",
+      "question": "Sentence with ___ (hint).",
+      "answer": "missing_word",
+      "hint": "Grammar hint"
+    }},
+    {{
+      "type": "reorder",
+      "segments": ["Word1", "Word2", "Word3"],
+      "correct_order": [0, 1, 2]
+    }}
+  ]
+}}
+Do not include markdown formatting like ```json. Just the raw JSON object.
+"""
+
+        try:
+            response = await LLMService.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Generate the exercises."}
+                ],
+                model=model
+            )
+            
+            # Clean up response
+            content = response.replace("```json", "").replace("```", "").strip()
+            
+            # Remove <think> tags if present
+            if "<think>" in content:
+                import re
+                content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
+            print(f"Raw response: {content}")
+            return json.loads(content)
+            
+        except Exception as e:
+            print(f"Error generating exercises: {e}")
+            raise e
+
+    @staticmethod
+    async def generate_context_card(
+        topic: str,
+        level: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, Any]:
+        """
+        Generate a context card (story with grammar spotting)
+        """
+        system_prompt = f"""
+You are an expert {target_language} teacher. Write a short story (approx 100-150 words) that heavily features the grammar topic: "{topic}" (Level {level}).
+Also provide a glossary and a list of phrases where the grammar rule is applied.
+
+Return ONLY valid JSON with this structure:
+{{
+  "title": "Story Title",
+  "text": "Full story text...",
+  "glossary": [
+    {{ "word": "German Word", "definition": "English Definition" }}
+  ],
+  "grammar_spotting": [
+    {{ "phrase": "phrase from text", "rule": "Brief explanation of why this rule applies here" }}
+  ]
+}}
+Do not include markdown formatting like ```json. Just the raw JSON object.
+"""
+
+        try:
+            model = model or config.DEFAULT_LLM_MODEL
+            
+            # Auto-prefix ollama if not specified
+            if model and "/" not in model and not model.startswith(("gpt-", "claude-", "gemini-")):
+                model = f"ollama/{model}"
+                
+            response = await LLMService.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Generate the context card."}
+                ],
+                model=model
+            )
+            
+            # Clean up response
+            content = response.replace("```json", "").replace("```", "").strip()
+            
+            # Remove <think> tags if present
+            if "<think>" in content:
+                import re
+                content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                
+            print(f"Raw response: {content}")
+            return json.loads(content)
+            
+        except Exception as e:
+            print(f"Error generating context card: {e}")
+            raise e
+
+

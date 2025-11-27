@@ -160,3 +160,66 @@ def get_task_status(task_id: str):
         'status': task.state,
         'result': task.result if task.ready() else None,
     }
+
+@celery_app.task(name='test_task')
+def test_task(word: str):
+    """Simple test task"""
+    import time
+    time.sleep(2)  # Simulate work
+    return f"Processed: {word}"
+
+
+@celery_app.task(name='generate_concept_card_task')
+def generate_concept_card_task(topic: str, level: str, model: str = None, target_language: str = "German"):
+    """Generate concept card in background"""
+    from services.llm import LLMService
+    import asyncio
+    
+    try:
+        result = asyncio.run(LLMService.generate_concept_card(
+            topic=topic,
+            level=level,
+            model=model,
+            target_language=target_language
+        ))
+        return result
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@celery_app.task(name='generate_exercises_task')
+def generate_exercises_task(topic: str, level: str, model: str = None, target_language: str = "German"):
+    """Generate exercises in background"""
+    from services.llm import LLMService
+    import asyncio
+    
+    try:
+        result = asyncio.run(LLMService.generate_exercises(
+            topic=topic,
+            level=level,
+            model=model,
+            target_language=target_language
+        ))
+        return result
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@celery_app.task(name='generate_context_card_task')
+def generate_context_card_task(topic: str, level: str, model: str = None, target_language: str = "German"):
+    """Generate context card in background"""
+    from services.llm import LLMService
+    import asyncio
+    
+    try:
+        result = asyncio.run(LLMService.generate_context_card(
+            topic=topic,
+            level=level,
+            model=model,
+            target_language=target_language
+        ))
+        return result
+    except Exception as e:
+        return {'error': str(e)}
+
+
