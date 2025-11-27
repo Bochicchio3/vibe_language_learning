@@ -76,4 +76,15 @@ async def analyze_writing(request: AnalyzeWritingRequest):
         )
         return result
     except Exception as e:
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/models")
+async def get_models():
+    """Get available LLM models"""
+    try:
+        models = await LLMService.get_available_models()
+        return {"models": models}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

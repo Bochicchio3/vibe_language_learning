@@ -5,7 +5,7 @@
 
 export const fetchModels = async () => {
     try {
-        const response = await fetch('/api/tags');
+        const response = await fetch('/api/chat/models');
         if (!response.ok) throw new Error('Failed to fetch models');
         const data = await response.json();
         return data.models || [];

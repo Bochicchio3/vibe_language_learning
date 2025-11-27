@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firebase';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, deleteDoc, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { recordActivitySession, CATEGORIES } from '../../services/activityTracker';
+import { fetchModels } from '../../services/ollama';
 import FeedbackModal from '../../components/shared/FeedbackModal';
 
 export default function ChatView({ isWidget = false, initialMessage = '' }) {
@@ -45,7 +46,7 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
 
     // Fetch Models
     useEffect(() => {
-        fetchModels();
+        fetchModelsList();
     }, []);
 
     // Fetch Conversations & Migration
@@ -127,15 +128,12 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const fetchModels = async () => {
+    const fetchModelsList = async () => {
         try {
-            const response = await fetch('/api/tags');
-            if (response.ok) {
-                const data = await response.json();
-                setModels(data.models || []);
-                if (data.models && data.models.length > 0) {
-                    setSelectedModel(data.models[0].name);
-                }
+            const modelsList = await fetchModels();
+            setModels(modelsList);
+            if (modelsList.length > 0) {
+                setSelectedModel(modelsList[0].name);
             }
         } catch (error) {
             console.error('Error fetching models:', error);
@@ -340,7 +338,7 @@ export default function ChatView({ isWidget = false, initialMessage = '' }) {
                         >
                             <MessageSquareWarning size={18} />
                         </button>
-                        <button onClick={fetchModels} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition">
+                        <button onClick={fetchModelsList} className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition">
                             <RefreshCw size={18} />
                         </button>
                     </div>

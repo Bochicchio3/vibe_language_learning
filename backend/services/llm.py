@@ -10,6 +10,7 @@ from config import config
 
 # Configure LiteLLM
 litellm.set_verbose = config.DEBUG
+import requests
 
 # Set API keys if provided
 if config.OPENAI_API_KEY:
@@ -462,3 +463,42 @@ Example: ["Response 1", "Response 2", "Response 3"]"""
         hints = json.loads(response)
         
         return hints if isinstance(hints, list) else ["Entschuldigung?", "Ich verstehe nicht.", "Können Sie das wiederholen?"]
+
+    @staticmethod
+    async def get_available_models() -> List[Dict[str, Any]]:
+        """Get available LLM models"""
+        models = []
+        
+        # 1. Try to fetch from Ollama if configured
+        if config.OLLAMA_BASE_URL:
+            try:
+                response = requests.get(f"{config.OLLAMA_BASE_URL}/api/tags", timeout=2)
+                if response.status_code == 200:
+                    data = response.json()
+                    for model in data.get("models", []):
+                        models.append({
+                            "name": model["name"],
+                            "provider": "ollama",
+                            "details": model
+                        })
+            except Exception as e:
+                print(f"Failed to fetch Ollama models: {e}")
+        
+        # 2. Add cloud models if keys are present
+        if config.OPENAI_API_KEY:
+            models.append({"name": "gpt-4o-mini", "provider": "openai"})
+            models.append({"name": "gpt-4o", "provider": "openai"})
+            
+        if config.ANTHROPIC_API_KEY:
+            models.append({"name": "claude-3-haiku-20240307", "provider": "anthropic"})
+            models.append({"name": "claude-3-5-sonnet-20240620", "provider": "anthropic"})
+            
+        if config.GEMINI_API_KEY:
+            models.append({"name": "gemini/gemini-1.5-flash", "provider": "google"})
+            models.append({"name": "gemini/gemini-1.5-pro", "provider": "google"})
+            
+        # 3. Fallback if empty
+        if not models:
+            models.append({"name": config.DEFAULT_LLM_MODEL, "provider": "unknown"})
+            
+        return models
