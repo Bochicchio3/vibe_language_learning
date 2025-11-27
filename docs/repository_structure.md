@@ -151,7 +151,8 @@ The application follows a **client-server architecture**:
 - **`grammar.py`**: Grammar explanation and exercise endpoints (TODO).
 
 ### Tests (`backend/tests/`)
-- Unit and integration tests for backend services.
+- **`unit/`**: Unit tests for backend services.
+- **`integration/`**: Integration tests (e.g., `test_docling_real.py`).
 
 ## Tests Directory (`tests/`)
 - **`unit/`**: Unit tests (e.g., `tts.test.js`).

@@ -76,7 +76,6 @@ async def analyze_writing(request: AnalyzeWritingRequest):
         )
         return result
     except Exception as e:
-    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
