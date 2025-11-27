@@ -206,22 +206,39 @@ export default function LibraryView() {
 
         // Simple tokenization to match App.jsx logic roughly
         const words = text.content.split(/([^\wäöüÄÖÜß]+)/).filter(w => /\w/.test(w));
-        const totalWords = words.length;
 
-        if (totalWords === 0) return { unknownCount: 0, unknownPercent: 0, totalWords: 0 };
-
-        let unknownCount = 0;
+        // Get unique words (case-insensitive for counting unique words)
+        const uniqueWords = new Set();
+        const wordMapping = new Map(); // Map lowercase -> original case
         words.forEach(word => {
             const cleanWord = word.trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-            if (savedVocab && savedVocab.hasOwnProperty(cleanWord)) {
+            if (cleanWord) {
+                const lowerWord = cleanWord.toLowerCase();
+                uniqueWords.add(lowerWord);
+                // Store the first occurrence's case
+                if (!wordMapping.has(lowerWord)) {
+                    wordMapping.set(lowerWord, cleanWord);
+                }
+            }
+        });
+
+        const totalUniqueWords = uniqueWords.size;
+        if (totalUniqueWords === 0) return { unknownCount: 0, unknownPercent: 0, totalWords: 0 };
+
+        // Count how many unique words are in savedVocab
+        // savedVocab stores words without lowercasing, so we need to check the original case
+        let unknownCount = 0;
+        uniqueWords.forEach(lowerWord => {
+            const originalCase = wordMapping.get(lowerWord);
+            if (savedVocab && savedVocab.hasOwnProperty(originalCase)) {
                 unknownCount++;
             }
         });
 
         return {
             unknownCount,
-            unknownPercent: Math.round((unknownCount / totalWords) * 100),
-            totalWords
+            unknownPercent: Math.round((unknownCount / totalUniqueWords) * 100),
+            totalWords: totalUniqueWords
         };
     };
 
@@ -231,16 +248,22 @@ export default function LibraryView() {
         return Object.values(savedVocab).filter(word => word.sourceTextId === textId).length;
     };
 
-    const getDifficultyColor = (percent, isRead) => {
-        if (!isRead) return 'border-slate-200'; // Default for unread
-        if (percent === 0) return 'border-amber-400 bg-amber-50'; // Completed (Gold)
-        if (percent < 5) return 'border-green-400 bg-green-50'; // Easy
-        if (percent < 15) return 'border-yellow-400 bg-yellow-50'; // Medium
-        return 'border-red-400 bg-red-50'; // Hard
+    const getDifficultyColor = (stats, isRead) => {
+        // Completed stories (marked as read) get amber/gold color (MASTERED)
+        if (isRead) return 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20';
+
+        // In progress stories (have saved vocabulary) get difficulty-based colors
+        if (stats.unknownCount > 0) {
+            if (stats.unknownPercent < 5) return 'border-green-400 bg-green-50 dark:border-green-600 dark:bg-green-900/20'; // Easy (green)
+            if (stats.unknownPercent < 15) return 'border-yellow-400 bg-yellow-50 dark:border-yellow-600 dark:bg-yellow-900/20'; // Medium (yellow)
+            return 'border-red-400 bg-red-50 dark:border-red-600 dark:bg-red-900/20'; // Hard (red)
+        }
+
+        // Unread/not started
+        return 'border-slate-200 dark:border-slate-700';
     };
 
     const getDifficultyBadge = (percent, isRead) => {
-        if (!isRead) return null;
         if (percent === 0) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">MASTERED</span>;
         if (percent < 5) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700">EASY</span>;
         if (percent < 15) return <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">MEDIUM</span>;
@@ -360,9 +383,9 @@ export default function LibraryView() {
             // Status Filter (Multi-select)
             let matchesStatus = true;
             if (selectedStatuses.length > 0) {
-                const isUnread = !text.isRead;
-                const isCompleted = text.isRead && stats.unknownPercent === 0;
-                const isInProgress = text.isRead && stats.unknownPercent > 0;
+                const isUnread = !text.isRead && stats.unknownCount === 0; // Not marked as read AND no saved vocabulary
+                const isCompleted = text.isRead; // Marked as read (checked)
+                const isInProgress = stats.unknownCount > 0; // Has saved vocabulary words
                 const isPending = text.status === 'pending';
 
                 matchesStatus = selectedStatuses.some(status => {
@@ -496,7 +519,7 @@ export default function LibraryView() {
 
                     {filteredTexts.map(text => {
                         const stats = getTextStats(text);
-                        const difficultyColor = getDifficultyColor(stats.unknownPercent, text.isRead);
+                        const difficultyColor = getDifficultyColor(stats, text.isRead);
                         const isPending = text.status === 'pending';
 
                         return (
@@ -570,20 +593,6 @@ export default function LibraryView() {
                                             {/* Private Actions */}
                                             {activeTab === 'private' && (
                                                 <>
-                                                    {/* Flashcard Button - only show for read stories with vocab */}
-                                                    {text.isRead && stats.unknownCount > 0 && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                navigate('/flashcards', { state: { initialDeck: { id: text.title, title: text.title, content: text.content } } });
-                                                            }}
-                                                            className="flex items-center gap-1 px-2 py-1 md:px-2.5 md:py-1.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-full transition text-[10px] md:text-xs font-bold"
-                                                            title={`Practice ${stats.unknownCount} words from this story`}
-                                                        >
-                                                            <Brain size={12} className="md:w-[14px] md:h-[14px]" />
-                                                            {stats.unknownCount}
-                                                        </button>
-                                                    )}
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -640,13 +649,10 @@ export default function LibraryView() {
                                             </div>
                                         </div>
 
-                                        {/* Stats Display */}
-                                        {text.isRead && (
-                                            <div className="flex items-center gap-1 text-indigo-600 bg-indigo-50 px-1.5 py-0.5 md:px-2 md:py-1 rounded-full" title={`${stats.unknownCount} unknown words`}>
-                                                <BarChart2 size={10} className="md:w-[12px] md:h-[12px]" />
-                                                {stats.unknownPercent}% New
-                                            </div>
-                                        )}
+                                        <div className="flex items-center gap-1 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 px-1.5 py-0.5 md:px-2 md:py-1 rounded-full" title={`${stats.unknownCount} unknown words (${stats.unknownPercent}%)`}>
+                                            <BarChart2 size={10} className="md:w-[12px] md:h-[12px]" />
+                                            {stats.unknownCount} new words ({stats.unknownPercent}%)
+                                        </div>
                                     </div>
                                 </div>
                             </div>
