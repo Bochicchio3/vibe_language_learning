@@ -9,6 +9,17 @@ The database is organized into **private** and **public** collections:
 - **Private Collections**: User-specific data stored under `/users/{userId}/...`
 - **Public Collections**: Community-shared data stored at root level
 
+## Schema Diagram
+
+<div class="mermaid-wrapper">
+  --8<-- "docs/assets/schema.svg"
+</div>
+<div class="zoom-controls" style="margin-top: 10px; text-align: center;">
+  <button class="md-button" id="zoom-in">Zoom In (+)</button>
+  <button class="md-button" id="zoom-out">Zoom Out (-)</button>
+  <button class="md-button" id="zoom-reset">Reset</button>
+</div>
+
 ## Collection Structure
 
 ```
@@ -251,7 +262,55 @@ The database is organized into **private** and **public** collections:
 
 ---
 
-## Progress Collection
+---
+
+## Grammar Lessons Collection (Private)
+
+**Path**: `/users/{userId}/grammar_lessons/{lessonId}`
+
+**Purpose**: Store generated lesson content (Concept + Context + Exercises)
+
+**Fields**:
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Lesson ID (e.g., "present_tense_a1") |
+| `topic` | string | Grammar topic |
+| `level` | string | CEFR level |
+| `concept` | object | ConceptCard data |
+| `context` | object | ContextCard data (optional) |
+| `exercises` | array | Array of exercise objects |
+| `createdAt` | timestamp | Creation date |
+| `updatedAt` | timestamp | Last update |
+
+**Indexes**:
+- `topic` (for filtering)
+- `level` (for filtering)
+
+---
+
+## Grammar Progress Collection (Private)
+
+**Path**: `/users/{userId}/grammar_progress/{lessonId}`
+
+**Purpose**: Track user scores and completion status
+
+**Fields**:
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Lesson ID (matches grammar_lessons) |
+| `isCompleted` | boolean | Whether lesson is completed |
+| `score` | number | Best score (0-100) |
+| `exercisesCompleted` | number | Number of exercises finished |
+| `totalExercises` | number | Total exercises in pack |
+| `lastAttemptAt` | timestamp | Last practice time |
+| `history` | array | Array of past attempt scores |
+
+**Indexes**:
+- `isCompleted` (for filtering)
+- `score` (for sorting)
+
+---
+
 
 **Path**: `/users/{userId}/progress/{itemId}`
 

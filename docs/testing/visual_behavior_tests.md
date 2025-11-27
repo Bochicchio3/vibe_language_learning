@@ -66,11 +66,31 @@ This document outlines the manual visual verification steps to ensure the core f
 - [ ] **Hints**: Click "Get Hint" button.
     - [ ] Verify hints are generated via backend API.
 
-## 8. Layout & Responsiveness
+## 8. Grammar Feature (Backend Required)
+- [ ] **Grammar Dashboard**: Navigate to "Grammar".
+- [ ] **Topic Selection**: Select a level (e.g., A1) and click a topic card.
+- [ ] **Lesson View**:
+    - [ ] Verify "Concept" tab is active by default.
+    - [ ] Verify concept explanation, examples, and mini-quiz are displayed.
+- [ ] **Context Card**:
+    - [ ] Click "Context" tab.
+    - [ ] Verify loading state (if generating).
+    - [ ] Verify story text and glossary appear.
+    - [ ] Click highlighted phrases in the story. Verify grammar rule explanation appears.
+- [ ] **Exercises**:
+    - [ ] Click "Start Practice" or "Exercises" tab.
+    - [ ] Verify "Generate Exercises" screen appears (if no exercises exist).
+    - [ ] Click "Generate". Verify loading state.
+    - [ ] **Multiple Choice**: Verify options are clickable and feedback is shown.
+    - [ ] **Gap Fill**: Verify input works and correct answer is shown on check.
+    - [ ] **Reorder**: Verify words can be reordered and checked.
+    - [ ] **Completion**: Finish all exercises. Verify score screen appears.
+
+## 9. Layout & Responsiveness
 - [ ] **Sidebar**: Verify the sidebar is collapsible (if implemented) or responsive on smaller screens.
 - [ ] **Dark Mode**: Toggle the theme. Verify colors update correctly across the app.
 
-## 9. Backend Integration
+## 10. Backend Integration
 - [ ] **API Health**: Visit http://localhost:8000/health and verify backend is running.
 - [ ] **API Docs**: Visit http://localhost:8000/docs and verify Swagger UI loads.
 - [ ] **Console Logs**: Check browser console for successful API calls (no CORS errors).

@@ -11,7 +11,8 @@ import {
     GraduationCap,
     ChevronRight
 } from 'lucide-react';
-import { GRAMMAR_CURRICULUM, generateLevelContent } from '../../services/grammarGenerator';
+import { generateConceptCard } from '../../services/api/grammar';
+import { GRAMMAR_CURRICULUM } from '../../services/grammarGenerator';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../firebase';
 import {
@@ -83,6 +84,7 @@ const GrammarView = ({ selectedModel }) => {
     };
 
     // Generate content for a specific topic
+    // Generate content for a specific topic
     const handleGenerateContent = async (topic) => {
         // Use the selected model from props, or fallback to a default if not set
         const modelToUse = selectedModel || 'qwq:latest';
@@ -91,13 +93,11 @@ const GrammarView = ({ selectedModel }) => {
         setGenerationProgress({ topicId: topic.id, status: 'generating' });
 
         try {
-            // Pass the topic ID and the Level (e.g., A1)
-            // Note: generateLevelContent expects (topicId, level, model)
-            // We'll use the topic.id as the ID and selectedLevel as the level context
-            const content = await generateLevelContent(topic.id, selectedLevel, modelToUse);
+            // Call the new backend API
+            // We pass topic.title because the prompt needs the topic name, not just ID
+            const content = await generateConceptCard(topic.title, selectedLevel, modelToUse);
 
             // Save to Firestore
-            // Structure: users/{uid}/grammar/{topicId}
             const topicRef = doc(db, 'users', currentUser.uid, 'grammar', topic.id);
 
             await setDoc(topicRef, {

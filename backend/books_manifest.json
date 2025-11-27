@@ -1,0 +1,36 @@
+[
+  {
+    "title": "Lara und das Raumschiff",
+    "description": "Lara ist ein kleines M\u00e4dchen, das davon tr\u00e4umt, Astronautin zu werden. Eines Tages findet sie ein kleines Raumschiff im Garten! Sie fliegt mit ihrem neuen Freund, dem Roboter Robi, zu einem fernen Planeten und erlebt dort ein spannendes Abenteuer.",
+    "chapters": [
+      {
+        "number": 1,
+        "title": "Ein Raumschiff im Garten!",
+        "summary": "Lara spielt im Garten. Sie sucht nach Blumen. Pl\u00f6tzlich sieht sie etwas Ungew\u00f6hnliches hinter dem Apfelbaum. Es ist ein kleines, silbernes Raumschiff! Sie \u00f6ffnet die T\u00fcr und trifft Robi, einen kleinen, freundlichen Roboter. Robi erkl\u00e4rt, dass sein Raumschiff kaputt ist und er Hilfe braucht. Lara ist sehr aufgeregt und verspricht, Robi zu helfen. Sie stellt sich und ihre Familie kurz vor. Es gibt einfache S\u00e4tze wie 'Ich bin Lara.' und 'Das ist mein Haus.'"
+      },
+      {
+        "number": 2,
+        "title": "Die Reise zum Planeten Zorn",
+        "summary": "Lara und Robi reparieren das Raumschiff zusammen. Robi erkl\u00e4rt, wie man das Raumschiff steuert. Sie fliegen los! Die Reise ist lang und sie sehen viele Sterne. Robi erkl\u00e4rt, dass sie zum Planeten Zorn fliegen, weil dort spezielle Ersatzteile f\u00fcr das Raumschiff sind. Lara ist ein bisschen \u00e4ngstlich, aber auch sehr aufgeregt. Sie z\u00e4hlt die Sterne und freut sich auf das Abenteuer. Einfache Beschreibungen der Umgebung im Weltraum."
+      },
+      {
+        "number": 3,
+        "title": "Auf dem Planeten Zorn",
+        "summary": "Lara und Robi landen auf dem Planeten Zorn. Der Planet ist sehr farbenfroh, aber auch ein bisschen seltsam. Sie treffen kleine, gr\u00fcne Wesen, die 'Zorns' genannt werden. Die Zorns sprechen eine andere Sprache, aber Lara und Robi k\u00f6nnen mithilfe eines \u00dcbersetzers kommunizieren. Die Zorns sind freundlich und helfen ihnen, die Ersatzteile zu finden. Sie zeigen ihnen den Weg zu einer Werkstatt. Kurze Dialoge mit den Zorns, einfache Fragen und Antworten."
+      },
+      {
+        "number": 4,
+        "title": "Die Reparatur und die Heimreise",
+        "summary": "In der Werkstatt repariert Robi das Raumschiff mit den neuen Ersatzteilen. Lara hilft ihm, indem sie Werkzeuge reicht. Es dauert eine Weile, aber schlie\u00dflich ist das Raumschiff wieder funktionst\u00fcchtig. Lara und Robi bedanken sich bei den Zorns f\u00fcr ihre Hilfe. Sie verabschieden sich und fliegen zur\u00fcck zur Erde. Sie denken an das Abenteuer und freuen sich darauf, ihre Familie zu sehen. Beschreibung der Freude \u00fcber die erfolgreiche Reparatur."
+      },
+      {
+        "number": 5,
+        "title": "Zuhause wieder!",
+        "summary": "Lara und Robi landen sicher im Garten. Laras Familie ist sehr erleichtert, dass sie wieder zu Hause ist. Lara erz\u00e4hlt ihnen von ihrem Abenteuer und von den freundlichen Zorns. Robi verabschiedet sich von Lara und fliegt zu seinem eigenen Planeten. Lara ist traurig, dass Robi geht, aber sie wei\u00df, dass sie sich vielleicht eines Tages wiedersehen werden. Sie erinnert sich an das Abenteuer und tr\u00e4umt von neuen Reisen im Weltraum. Ein gl\u00fcckliches Ende und die Betonung der Freundschaft."
+      }
+    ],
+    "topic": "Space Adventure",
+    "level": "A1",
+    "status": "planned"
+  }
+]
