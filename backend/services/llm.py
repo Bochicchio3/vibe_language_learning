@@ -787,4 +787,125 @@ Guidelines:
             print(f"Error generating curriculum for {level}: {e}")
             return {"level": level, "topics": []}
 
+    @staticmethod
+    async def generate_book_outline(
+        topic: str,
+        level: str,
+        model: Optional[str] = None,
+        target_language: str = "German"
+    ) -> Dict[str, Any]:
+        """
+        Generate a book outline (title + chapters)
+        """
+        system_prompt = f"""
+You are an expert {target_language} author and teacher. Plan a short book about "{topic}" for a learner at {level} level.
+
+Return ONLY valid JSON with this structure:
+{{
+  "title": "Engaging Book Title",
+  "description": "Brief summary of the plot",
+  "chapters": [
+    {{
+      "number": 1,
+      "title": "Chapter Title",
+      "summary": "Detailed summary of what happens in this chapter. This will be used to generate the content."
+    }},
+    {{
+      "number": 2,
+      "title": "Chapter Title",
+      "summary": "..."
+    }}
+  ]
+}}
+Guidelines:
+- Create 3-5 chapters.
+- Ensure the story flows logically.
+- The summaries should be detailed enough to guide the writing of the chapter.
+Do not include markdown formatting like ```json. Just the raw JSON object.
+"""
+
+        try:
+            response = await LLMService.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Generate the book outline."}
+                ],
+                model=model
+            )
+            
+            # Clean up response
+            content = response.replace("```json", "").replace("```", "").strip()
+            
+            # Remove <think> tags if present
+            if "<think>" in content:
+                import re
+                content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                
+            return json.loads(content)
+            
+        except Exception as e:
+            print(f"Error generating book outline: {e}")
+            raise e
+
+    @staticmethod
+    async def generate_chapter_chunk(
+        book_title: str,
+        chapter_title: str,
+        chapter_summary: str,
+        chunk_index: int,
+        total_chunks: int,
+        previous_context: str = "",
+        model: Optional[str] = None,
+        target_language: str = "German",
+        level: str = "A2"
+    ) -> str:
+        """
+        Generate a chunk of a chapter
+        """
+        chunk_desc = ["beginning", "middle", "conclusion"][chunk_index] if total_chunks == 3 else f"part {chunk_index + 1} of {total_chunks}"
+        
+        system_prompt = f"""
+You are an expert {target_language} author writing a book for {level} level learners.
+Book Title: "{book_title}"
+Chapter: "{chapter_title}"
+Chapter Summary: "{chapter_summary}"
+
+Your task: Write the **{chunk_desc}** of this chapter.
+
+Context from previous parts:
+"{previous_context}"
+
+Guidelines:
+- Write in {target_language}.
+- Level: {level} (vocabulary and grammar).
+- Length: Approx 150-200 words.
+- Maintain continuity with the previous context.
+- If this is the last chunk, ensure the chapter concludes naturally (or ends on a cliffhanger if appropriate for the story flow).
+- Return ONLY the text of the story chunk. No meta-commentary.
+"""
+
+        try:
+            response = await LLMService.chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Write the chapter chunk."}
+                ],
+                model=model,
+                temperature=0.7
+            )
+            
+            # Clean up response (remove markdown code blocks if any, though we asked for just text)
+            content = response.replace("```json", "").replace("```", "").strip()
+            
+            # Remove <think> tags if present
+            if "<think>" in content:
+                import re
+                content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                
+            return content
+            
+        except Exception as e:
+            print(f"Error generating chapter chunk: {e}")
+            raise e
+
 
