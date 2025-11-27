@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import NewsModal from './library/NewsModal';
 import ConfirmationModal from './ConfirmationModal';
+import StoryGeneratorModal from './library/StoryGeneratorModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useVocab } from '../hooks/useVocab';
 import { useLibrary } from '../hooks/useLibrary';
@@ -55,6 +56,8 @@ export default function LibraryView() {
     const [selectedLevels, setSelectedLevels] = useState([]);
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [showNewsModal, setShowNewsModal] = useState(false);
+    const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+    const [generatorInitialTopic, setGeneratorInitialTopic] = useState('');
 
     // Public/Private State
     const [activeTab, setActiveTab] = useState('private'); // 'private' | 'public'
@@ -304,10 +307,8 @@ export default function LibraryView() {
 
         const handleSubmit = (e) => {
             e.preventDefault();
-            if (topic) {
-                localStorage.setItem('generatorTopic', topic);
-            }
-            navigate('/generator');
+            setGeneratorInitialTopic(topic);
+            setShowGeneratorModal(true);
         };
 
         return (
@@ -395,6 +396,13 @@ export default function LibraryView() {
                     if (status === 'Pending') return isPending;
                     return false;
                 });
+            }
+
+            // Hide completed stories by default UNLESS Completed status filter is selected
+            if (selectedStatuses.length === 0 || !selectedStatuses.includes('Completed')) {
+                if (text.isRead) {
+                    return false;
+                }
             }
 
             return matchesSearch && matchesLevel && matchesStatus;
@@ -599,10 +607,10 @@ export default function LibraryView() {
                                                             handleToggleRead(text.id, !text.isRead);
                                                         }}
                                                         className={`p-1.5 md:p-2 rounded-full transition ${text.isRead
-                                                            ? 'text-green-500 bg-green-50 hover:bg-green-100'
-                                                            : 'text-slate-300 hover:text-slate-500 hover:bg-slate-50'
+                                                            ? 'text-green-500 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50'
+                                                            : 'text-slate-300 hover:text-slate-500 dark:hover:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                                             }`}
-                                                        title={text.isRead ? "Mark as Unread" : "Mark as Read"}
+                                                        title={text.isRead ? "Mark as Incomplete" : "Mark as Complete"}
                                                     >
                                                         {text.isRead ? <CheckCircle size={16} className="md:w-[18px] md:h-[18px]" /> : <Circle size={16} className="md:w-[18px] md:h-[18px]" />}
                                                     </button>
@@ -680,6 +688,16 @@ export default function LibraryView() {
                 <NewsModal
                     onClose={() => setShowNewsModal(false)}
                     onSaveText={saveText}
+                />
+            )}
+
+            {showGeneratorModal && (
+                <StoryGeneratorModal
+                    onClose={() => {
+                        setShowGeneratorModal(false);
+                        setGeneratorInitialTopic('');
+                    }}
+                    initialTopic={generatorInitialTopic}
                 />
             )}
         </div>

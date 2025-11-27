@@ -119,11 +119,21 @@ export default function Flashcard({ word, onGrade }) {
             >
                 <motion.div
                     className={`relative w-full h-full transition-all duration-500 transform-style-3d ${isFlipped ? 'rotate-y-180' : ''}`}
-                    onTap={() => !isFlipped && setIsFlipped(true)}
+                    onTap={(e) => {
+                        // Don't flip if clicking on context button or its container
+                        const target = e.target;
+                        if (target.closest('[data-context-area]')) {
+                            return;
+                        }
+                        if (!isFlipped) {
+                            setIsFlipped(true);
+                        }
+                    }}
                 >
                     {/* Front */}
                     <motion.div
-                        className="absolute w-full h-full backface-hidden bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center justify-center p-8 overflow-hidden"
+                        className="absolute w-full h-full backface-hidden bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center p-8 overflow-hidden"
+                        style={{ zIndex: 1 }}
                     >
                         {/* Color Overlay */}
                         <motion.div
@@ -138,20 +148,26 @@ export default function Flashcard({ word, onGrade }) {
 
                             {/* Context Toggle */}
                             {word.context && (
-                                <div className="w-full mt-4 z-10" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+                                <motion.div
+                                    data-context-area
+                                    className="w-full mt-4 z-10"
+                                    onTapStart={(e) => e.stopPropagation()}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onClick={(e) => e.stopPropagation()}
+                                >
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setShowContext(!showContext); }}
-                                        className="text-xs text-indigo-600 font-bold uppercase tracking-wider hover:text-indigo-800 transition flex items-center justify-center gap-1 mx-auto mb-2"
+                                        className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider hover:text-indigo-800 dark:hover:text-indigo-300 transition flex items-center justify-center gap-1 mx-auto mb-2"
                                     >
                                         {showContext ? 'Hide Context' : 'Show Context'}
                                     </button>
 
                                     {showContext && (
-                                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 w-full animate-in fade-in slide-in-from-bottom-2 max-h-32 overflow-y-auto">
-                                            <p className="text-slate-600 italic text-center text-sm">"{word.context}"</p>
+                                        <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 w-full animate-in fade-in slide-in-from-bottom-2 max-h-32 overflow-y-auto">
+                                            <p className="text-slate-600 dark:text-slate-300 italic text-center text-sm">"{word.context}"</p>
                                         </div>
                                     )}
-                                </div>
+                                </motion.div>
                             )}
                         </div>
 
@@ -159,7 +175,10 @@ export default function Flashcard({ word, onGrade }) {
                     </motion.div>
 
                     {/* Back */}
-                    <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-indigo-50 rounded-2xl shadow-xl border border-indigo-100 flex flex-col p-8 overflow-hidden">
+                    <motion.div
+                        className="absolute w-full h-full backface-hidden rotate-y-180 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-indigo-200 dark:border-slate-700 flex flex-col p-8 overflow-hidden"
+                        style={{ opacity: 1, zIndex: 1 }}
+                    >
                         {/* Flip Back Button */}
                         <button
                             onClick={(e) => { e.stopPropagation(); setIsFlipped(false); }}
@@ -212,7 +231,7 @@ export default function Flashcard({ word, onGrade }) {
                                 <span className="text-[10px] opacity-70">7d</span>
                             </button>
                         </div>
-                    </div>
+                    </motion.div>
                 </motion.div>
             </motion.div>
         </div>
