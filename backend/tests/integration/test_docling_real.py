@@ -22,7 +22,7 @@ def test_real_pdf():
     
     if not os.path.exists(pdf_path):
         print("Error: File not found!")
-        return
+        assert False, f"Sample file not found at {pdf_path}"
 
     print("Initializing DocumentProcessor...")
     try:
@@ -55,6 +55,23 @@ def test_real_pdf():
         print("\nPreview of extracted text:")
         print(result['text'][:500])
         print("...")
+
+        # Save results to file
+        output_path = os.path.join(os.path.dirname(pdf_path), "docling_output.json")
+        # If running in docker with /public mounted, this puts it in /public/samples/docling_output.json
+        # But let's put it in a dedicated output dir if possible, or just next to the file for now as it's mounted.
+        
+        # Actually, let's save to a specific test_outputs directory if it exists, otherwise current dir
+        output_dir = "/app/test_outputs"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            
+        output_file = os.path.join(output_dir, "docling_results.json")
+        
+        print(f"\nSaving results to {output_file}...")
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(result, f, indent=2, default=str)
+        print("Results saved successfully.")
         
     except Exception as e:
         print(f"\nError processing document: {e}")
