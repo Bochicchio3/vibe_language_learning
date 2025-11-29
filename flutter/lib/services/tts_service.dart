@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -10,12 +11,15 @@ class TtsService {
   bool _isPlaying = false;
   bool get isPlaying => _isPlaying;
 
+  final _progressController = StreamController<int>.broadcast();
+  Stream<int> get progressStream => _progressController.stream;
+
   TtsService() {
     _init();
   }
 
   Future<void> _init() async {
-    await _flutterTts.setLanguage("en-US"); // Default, should be dynamic
+    await _flutterTts.setLanguage("de-DE"); // Default to German
     await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
@@ -26,10 +30,17 @@ class TtsService {
 
     _flutterTts.setCompletionHandler(() {
       _isPlaying = false;
+      _progressController.add(-1); // Signal completion
     });
 
     _flutterTts.setCancelHandler(() {
       _isPlaying = false;
+      _progressController.add(-1);
+    });
+
+    _flutterTts
+        .setProgressHandler((String text, int start, int end, String word) {
+      _progressController.add(start);
     });
   }
 
@@ -44,5 +55,9 @@ class TtsService {
 
   Future<void> setRate(double rate) async {
     await _flutterTts.setSpeechRate(rate);
+  }
+
+  void dispose() {
+    _progressController.close();
   }
 }

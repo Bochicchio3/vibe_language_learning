@@ -46,7 +46,7 @@ class BooksScreen extends ConsumerWidget {
               return Card(
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: () => context.push('/book/${book.id}'),
+                  onTap: () => context.push('/books/${book.id}'),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -59,7 +59,9 @@ class BooksScreen extends ConsumerWidget {
                                     const Icon(Icons.book, size: 50),
                               )
                             : Container(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
                                 child: const Icon(Icons.book, size: 50),
                               ),
                       ),
@@ -98,43 +100,6 @@ class BooksScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 1,
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/library');
-              break;
-            case 1:
-              context.go('/books');
-              break;
-            case 2:
-              context.go('/vocab');
-              break;
-            case 3:
-              context.go('/chat');
-              break;
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.library_books),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.book),
-            label: 'Books',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.style),
-            label: 'Vocab',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat),
-            label: 'Chat',
-          ),
-        ],
       ),
     );
   }

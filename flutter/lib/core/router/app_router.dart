@@ -11,7 +11,8 @@ import '../../features/vocabulary/vocab_dashboard.dart';
 import '../../features/vocabulary/flashcard_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/generator/generator_screen.dart';
-import '../../shared/widgets/placeholder_screen.dart';
+
+import '../../shared/widgets/scaffold_with_navigation.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateChangesProvider);
@@ -32,30 +33,65 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
-      GoRoute(
-        path: '/library',
-        builder: (context, state) => const LibraryScreen(),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return ScaffoldWithNavigation(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/library',
+                builder: (context, state) => const LibraryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/books',
+                builder: (context, state) => const BooksScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':id', // Nested route for detail
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return BookDetailScreen(bookId: id);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/vocab',
+                builder: (context, state) => const VocabDashboard(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/chat',
+                builder: (context, state) => const ChatScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: '/read/:id',
+        parentNavigatorKey: null, // Full screen
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return ReaderScreen(storyId: id);
         },
       ),
       GoRoute(
-        path: '/books',
-        builder: (context, state) => const BooksScreen(),
-      ),
-      GoRoute(
-        path: '/book/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return BookDetailScreen(bookId: id);
-        },
-      ),
-      GoRoute(
         path: '/book/:bookId/read/:chapterIndex',
+        parentNavigatorKey: null, // Full screen
         builder: (context, state) {
           final bookId = state.pathParameters['bookId']!;
           final chapterIndex = int.parse(state.pathParameters['chapterIndex']!);
@@ -64,23 +100,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/vocab',
-        builder: (context, state) => const VocabDashboard(),
-      ),
-      GoRoute(
         path: '/flashcards',
+        parentNavigatorKey: null,
         builder: (context, state) => const FlashcardScreen(),
       ),
       GoRoute(
-        path: '/chat',
-        builder: (context, state) => const ChatScreen(),
-      ),
-      GoRoute(
-        path: '/grammar',
-        builder: (context, state) => const PlaceholderScreen(title: 'Grammar'),
-      ),
-      GoRoute(
         path: '/generator',
+        parentNavigatorKey: null,
         builder: (context, state) => const GeneratorScreen(),
       ),
     ],

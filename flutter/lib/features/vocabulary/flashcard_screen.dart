@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'vocabulary_repository.dart';
@@ -12,6 +13,13 @@ class FlashcardScreen extends ConsumerStatefulWidget {
 class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
   bool _showDefinition = false;
   int _currentIndex = 0;
+
+  void _nextCard() {
+    setState(() {
+      _showDefinition = false;
+      _currentIndex++;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +38,11 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Session Complete!'),
+                  const Icon(Icons.check_circle_outline,
+                      size: 64, color: Colors.green),
+                  const SizedBox(height: 16),
+                  const Text('Session Complete!',
+                      style: TextStyle(fontSize: 24)),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -50,44 +62,34 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
               children: [
                 LinearProgressIndicator(
                   value: (_currentIndex + 1) / words.length,
+                  borderRadius: BorderRadius.circular(4),
                 ),
                 const SizedBox(height: 32),
                 Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _showDefinition = !_showDefinition),
-                    child: Card(
-                      elevation: 4,
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _showDefinition ? word.definition : word.word,
-                                style: Theme.of(context).textTheme.displaySmall,
-                                textAlign: TextAlign.center,
-                              ),
-                              if (_showDefinition) ...[
-                                const SizedBox(height: 16),
-                                Text(
-                                  word.context,
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                        fontStyle: FontStyle.italic,
-                                        color: Theme.of(context).colorScheme.secondary,
-                                      ),
-                                  textAlign: TextAlign.center,
+                  child: Center(
+                    child: TweenAnimationBuilder(
+                      tween:
+                          Tween<double>(begin: 0, end: _showDefinition ? 1 : 0),
+                      duration: const Duration(milliseconds: 600),
+                      builder: (context, double val, child) {
+                        final isFront = val < 0.5;
+                        final angle = val * pi;
+                        final transform = Matrix4.identity()
+                          ..setEntry(3, 2, 0.001)
+                          ..rotateY(angle);
+
+                        return Transform(
+                          transform: transform,
+                          alignment: Alignment.center,
+                          child: isFront
+                              ? _buildFront(word)
+                              : Transform(
+                                  transform: Matrix4.identity()..rotateY(pi),
+                                  alignment: Alignment.center,
+                                  child: _buildBack(word),
                                 ),
-                              ],
-                              const SizedBox(height: 32),
-                              Text(
-                                _showDefinition ? 'Tap to flip back' : 'Tap to reveal definition',
-                                style: Theme.of(context).textTheme.labelMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -96,44 +98,17 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      FilledButton(
-                        onPressed: () {
-                          // TODO: Implement SRS logic (Hard)
-                          setState(() {
-                            _showDefinition = false;
-                            _currentIndex++;
-                          });
-                        },
-                        style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                        child: const Text('Hard'),
-                      ),
-                      FilledButton(
-                        onPressed: () {
-                          // TODO: Implement SRS logic (Good)
-                          setState(() {
-                            _showDefinition = false;
-                            _currentIndex++;
-                          });
-                        },
-                        style: FilledButton.styleFrom(backgroundColor: Colors.blue),
-                        child: const Text('Good'),
-                      ),
-                      FilledButton(
-                        onPressed: () {
-                          // TODO: Implement SRS logic (Easy)
-                          setState(() {
-                            _showDefinition = false;
-                            _currentIndex++;
-                          });
-                        },
-                        style: FilledButton.styleFrom(backgroundColor: Colors.green),
-                        child: const Text('Easy'),
-                      ),
+                      _buildRatingButton('Hard', Colors.red, _nextCard),
+                      _buildRatingButton('Good', Colors.blue, _nextCard),
+                      _buildRatingButton('Easy', Colors.green, _nextCard),
                     ],
                   )
                 else
                   FilledButton(
                     onPressed: () => setState(() => _showDefinition = true),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
                     child: const Text('Show Answer'),
                   ),
               ],
@@ -142,6 +117,73 @@ class _FlashcardScreenState extends ConsumerState<FlashcardScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
+    );
+  }
+
+  Widget _buildFront(VocabWord word) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: double.infinity,
+        height: 400,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(32),
+        child: Text(
+          word.word,
+          style: Theme.of(context).textTheme.displayMedium,
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBack(VocabWord word) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Container(
+        width: double.infinity,
+        height: 400,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              word.definition,
+              style: Theme.of(context).textTheme.headlineSmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              word.context,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    fontStyle: FontStyle.italic,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRatingButton(String label, Color color, VoidCallback onPressed) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: color,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          child: Text(label),
+        ),
       ),
     );
   }

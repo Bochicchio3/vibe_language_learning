@@ -2,18 +2,182 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'vocabulary_repository.dart';
+import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../auth/data/auth_repository.dart';
+import '../../services/ai_service.dart';
 
-class VocabDashboard extends ConsumerWidget {
+class VocabDashboard extends ConsumerStatefulWidget {
   const VocabDashboard({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<VocabDashboard> createState() => _VocabDashboardState();
+}
+
+class _VocabDashboardState extends ConsumerState<VocabDashboard> {
+  bool _isGenerating = false;
+
+  Future<void> _generateFlashcards() async {
+    final topicController = TextEditingController();
+    String selectedLevel = 'A1';
+    final levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+
+    final shouldGenerate = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate Flashcards'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: topicController,
+              decoration: const InputDecoration(
+                labelText: 'Topic',
+                hintText: 'e.g., Travel, Food',
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedLevel,
+              decoration: const InputDecoration(labelText: 'Level'),
+              items: levels
+                  .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                  .toList(),
+              onChanged: (val) => selectedLevel = val!,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Generate'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldGenerate == true && topicController.text.isNotEmpty) {
+      setState(() => _isGenerating = true);
+      try {
+        final models = await ref.read(aiServiceProvider).fetchModels();
+        if (models.isEmpty) throw Exception('No AI models available');
+
+        final flashcards = await ref.read(aiServiceProvider).generateFlashcards(
+              topic: topicController.text,
+              level: selectedLevel,
+              model: models.first,
+            );
+
+        int savedCount = 0;
+        for (final card in flashcards) {
+          if (card is Map) {
+            await ref.read(vocabularyRepositoryProvider).saveWord(
+                  word: card['word'] ?? '',
+                  definition: card['definition'] ?? '',
+                  context: card['context'] ?? '',
+                  targetLanguage: 'German', // TODO: Make dynamic
+                );
+            savedCount++;
+          }
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Generated and saved $savedCount flashcards!')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isGenerating = false);
+      }
+    }
+  }
+
+  Future<void> _dumpDebugData() async {
+    try {
+      final user = ref.read(authRepositoryProvider).currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      final firestore = FirebaseFirestore.instance;
+      final userDoc = await firestore.collection('users').doc(user.uid).get();
+      final vocabSnapshot = await firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('vocabulary')
+          .get();
+
+      final debugData = {
+        'userId': user.uid,
+        'userDocExists': userDoc.exists,
+        'userDocData': userDoc.data(),
+        'vocabCount': vocabSnapshot.docs.length,
+        'vocabData':
+            vocabSnapshot.docs.map((d) => {'id': d.id, ...d.data()}).toList(),
+      };
+
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(debugData);
+      print('DEBUG DUMP:\n$jsonStr');
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Debug Data Dump'),
+            content: SingleChildScrollView(
+              child: SelectableText(jsonStr),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Debug dump error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Debug error: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final vocabAsync = ref.watch(vocabularyListProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vocabulary'),
         actions: [
+          if (_isGenerating)
+            const Padding(
+              padding: EdgeInsets.only(right: 16.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              onPressed: _generateFlashcards,
+              tooltip: 'Generate with AI',
+            ),
           IconButton(
             icon: const Icon(Icons.style),
             onPressed: () {
@@ -21,18 +185,35 @@ class VocabDashboard extends ConsumerWidget {
             },
             tooltip: 'Practice Flashcards',
           ),
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: _dumpDebugData,
+            tooltip: 'Debug Data Dump',
+          ),
         ],
       ),
       body: vocabAsync.when(
         data: (words) {
           if (words.isEmpty) {
-            return const Center(
-              child: Text('No words saved yet.'),
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('No words saved yet.'),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _generateFlashcards,
+                    icon: const Icon(Icons.auto_awesome),
+                    label: const Text('Generate Flashcards'),
+                  ),
+                ],
+              ),
             );
           }
-          
+
           final masteredCount = words.where((w) => w.isMastered).length;
-          final dueCount = words.where((w) => w.nextReview.isBefore(DateTime.now())).length;
+          final dueCount =
+              words.where((w) => w.nextReview.isBefore(DateTime.now())).length;
 
           return Column(
             children: [
@@ -89,43 +270,6 @@ class VocabDashboard extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 2,
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/library');
-              break;
-            case 1:
-              context.go('/books');
-              break;
-            case 2:
-              context.go('/vocab');
-              break;
-            case 3:
-              context.go('/chat');
-              break;
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.library_books),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.book),
-            label: 'Books',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.style),
-            label: 'Vocab',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat),
-            label: 'Chat',
-          ),
-        ],
       ),
     );
   }

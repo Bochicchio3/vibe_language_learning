@@ -63,8 +63,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 children: [
                   const SizedBox(height: 16),
                   // Top Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    runSpacing: 16,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,6 +97,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                         ],
                       ),
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           OutlinedButton.icon(
                             onPressed: () {
@@ -307,43 +310,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 );
               },
             ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/library');
-              break;
-            case 1:
-              context.go('/books');
-              break;
-            case 2:
-              context.go('/vocab');
-              break;
-            case 3:
-              context.go('/chat');
-              break;
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.library_books),
-            label: 'Library',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.book),
-            label: 'Books',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.style),
-            label: 'Vocab',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.chat),
-            label: 'Chat',
-          ),
         ],
       ),
     );
