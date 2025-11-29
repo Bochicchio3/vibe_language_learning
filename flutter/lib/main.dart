@@ -14,11 +14,13 @@ void main() async {
 
   await Firebase.initializeApp(
       options: FirebaseOptions(
-    apiKey: 'AIzaSyB12iWKLtQnrGwH62HfSB5Lb3h6aAdIP2Y',
-    appId: '1:902980237738:web:c80288efef81521a2393d3',
-    messagingSenderId: 'G-8FY4SD6PZJ',
-    projectId: 'vibe-language-learning',
-  )); // until we run flutterfire configure
+          apiKey: 'AIzaSyB12iWKLtQnrGwH62HfSB5Lb3h6aAdIP2Y',
+          appId: '1:902980237738:web:c80288efef81521a2393d3',
+          messagingSenderId: 'G-8FY4SD6PZJ',
+          projectId: 'vibe-language-learning',
+          authDomain: "vibe-language-learning.firebaseapp.com",
+          storageBucket: "vibe-language-learning.firebasestorage.app",
+          measurementId: "G-8FY4SD6PZJ")); // until we run flutterfire configure
 
   runApp(
     const ProviderScope(
