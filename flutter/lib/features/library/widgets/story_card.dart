@@ -107,171 +107,216 @@ class StoryCard extends StatelessWidget {
     final borderColor = _getBorderColor(isDark);
     final bgColor = _getDifficultyColor(isDark);
 
-    return Card(
-      elevation: 0,
+    return _HoverableCard(
+      onTap: () => context.push('/read/${story.id}'),
       color: bgColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: borderColor, width: 1.5),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push('/read/${story.id}'),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
+      borderColor: borderColor,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF334155)
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
                           color: isDark
-                              ? const Color(0xFF334155)
-                              : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isDark
-                                ? const Color(0xFF475569)
-                                : const Color(0xFFE2E8F0),
-                          ),
-                        ),
-                        child: Text(
-                          story.level,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color:
-                                isDark ? Colors.white : const Color(0xFF475569),
-                          ),
+                              ? const Color(0xFF475569)
+                              : const Color(0xFFE2E8F0),
                         ),
                       ),
+                      child: Text(
+                        story.level,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color:
+                              isDark ? Colors.white : const Color(0xFF475569),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildDifficultyBadge(isDark),
+                  ],
+                ),
+                Row(
+                  children: [
+                    if (onToggleRead != null)
+                      IconButton(
+                        icon: Icon(
+                          story.isRead
+                              ? Icons.check_circle
+                              : Icons.circle_outlined,
+                          size: 20,
+                          color: story.isRead ? Colors.green : Colors.grey,
+                        ),
+                        onPressed: onToggleRead,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip:
+                            story.isRead ? 'Mark as Unread' : 'Mark as Read',
+                      ),
+                    if (onDelete != null) ...[
                       const SizedBox(width: 8),
-                      _buildDifficultyBadge(isDark),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      if (onToggleRead != null)
-                        IconButton(
-                          icon: Icon(
-                            story.isRead
-                                ? Icons.check_circle
-                                : Icons.circle_outlined,
-                            size: 20,
-                            color: story.isRead ? Colors.green : Colors.grey,
-                          ),
-                          onPressed: onToggleRead,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip:
-                              story.isRead ? 'Mark as Unread' : 'Mark as Read',
-                        ),
-                      if (onDelete != null) ...[
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline,
-                              size: 20, color: Colors.grey),
-                          onPressed: onDelete,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Delete',
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Title
-              Text(
-                story.title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-
-              // Content Preview
-              Text(
-                story.content,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-                  height: 1.5,
-                ),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const Spacer(),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              // Stats Row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.menu_book,
-                          size: 14, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${stats.totalWords}',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(Icons.access_time,
-                          size: 14, color: Colors.grey.shade500),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${stats.readingTimeMinutes}m',
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade500),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline,
+                            size: 20, color: Colors.grey),
+                        onPressed: onDelete,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        tooltip: 'Delete',
                       ),
                     ],
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.indigo.shade900.withValues(alpha: 0.3)
-                          : Colors.indigo.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.bar_chart,
-                            size: 12, color: Colors.indigo.shade400),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${stats.unknownCount} new (${stats.unknownPercent}%)',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.indigo.shade300
-                                : Colors.indigo.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Title
+            Text(
+              story.title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-            ],
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+
+            // Content Preview
+            Text(
+              story.content,
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                height: 1.5,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Stats Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.menu_book,
+                        size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${stats.totalWords}',
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.access_time,
+                        size: 14, color: Colors.grey.shade500),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${stats.readingTimeMinutes}m',
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.indigo.shade900.withValues(alpha: 0.3)
+                        : Colors.indigo.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.bar_chart,
+                          size: 12, color: Colors.indigo.shade400),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${stats.unknownCount} new (${stats.unknownPercent}%)',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isDark
+                              ? Colors.indigo.shade300
+                              : Colors.indigo.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  final Color color;
+  final Color borderColor;
+
+  const _HoverableCard({
+    required this.child,
+    required this.onTap,
+    required this.color,
+    required this.borderColor,
+  });
+
+  @override
+  State<_HoverableCard> createState() => _HoverableCardState();
+}
+
+class _HoverableCardState extends State<_HoverableCard> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.identity()..scale(_isHovering ? 1.02 : 1.0),
+          child: Card(
+            elevation: _isHovering ? 8 : 0,
+            color: widget.color,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: _isHovering
+                    ? Theme.of(context).colorScheme.primary
+                    : widget.borderColor,
+                width: _isHovering ? 2 : 1.5,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: widget.child,
           ),
         ),
       ),

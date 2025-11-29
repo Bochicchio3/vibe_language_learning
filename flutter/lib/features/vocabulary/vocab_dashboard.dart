@@ -251,18 +251,20 @@ class _VocabDashboardState extends ConsumerState<VocabDashboard> {
                 ),
               ),
               Expanded(
-                child: ListView.builder(
-                  itemCount: words.length,
-                  itemBuilder: (context, index) {
-                    final word = words[index];
-                    return ListTile(
-                      title: Text(word.word),
-                      subtitle: Text(word.definition),
-                      trailing: word.isMastered
-                          ? const Icon(Icons.star, color: Colors.amber)
-                          : null,
-                    );
-                  },
+                child: Scrollbar(
+                  child: ListView.builder(
+                    itemCount: words.length,
+                    itemBuilder: (context, index) {
+                      final word = words[index];
+                      return ListTile(
+                        title: Text(word.word),
+                        subtitle: Text(word.definition),
+                        trailing: word.isMastered
+                            ? const Icon(Icons.star, color: Colors.amber)
+                            : null,
+                      );
+                    },
+                  ),
                 ),
               ),
             ],

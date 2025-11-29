@@ -52,265 +52,272 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          // Header & Filters
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  // Top Header
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    runSpacing: 16,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Your Library',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF0F172A),
-                                ),
-                          ),
-                          Text(
-                            'Manage and read your German texts',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: isDark
-                                      ? Colors.grey.shade400
-                                      : Colors.grey.shade600,
-                                ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: () {
-                              // TODO: Implement Daily News
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Daily News coming soon')),
-                              );
-                            },
-                            icon: const Icon(Icons.public, size: 18),
-                            label: const Text('Daily News'),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton.icon(
-                            onPressed: () => context.push('/generator'),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add Text'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor:
-                                  const Color(0xFF4F46E5), // Indigo
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tabs
-                  Row(
-                    children: [
-                      _buildTab('My Library', 'private'),
-                      const SizedBox(width: 24),
-                      _buildTab('Public Library', 'public'),
-                    ],
-                  ),
-                  const Divider(height: 1),
-                  const SizedBox(height: 24),
-
-                  // Search Bar
-                  TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: 'Search titles or content...',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Filters
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
+      body: Scrollbar(
+        child: CustomScrollView(
+          slivers: [
+            // Header & Filters
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    // Top Header
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      runSpacing: 16,
                       children: [
-                        Text('Level:',
-                            style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('All', _selectedLevels.isEmpty,
-                            () => _toggleLevel('All')),
-                        ...['A1', 'A2', 'B1', 'B2', 'C1'].map((level) =>
-                            _buildFilterChip(
-                                level,
-                                _selectedLevels.contains(level),
-                                () => _toggleLevel(level))),
-                        const SizedBox(width: 16),
-                        Container(
-                            width: 1, height: 24, color: Colors.grey.shade300),
-                        const SizedBox(width: 16),
-                        Text('Status:',
-                            style: TextStyle(
-                                color: Colors.grey.shade500,
-                                fontWeight: FontWeight.w500)),
-                        const SizedBox(width: 8),
-                        _buildFilterChip('All', _selectedStatuses.isEmpty,
-                            () => _toggleStatus('All')),
-                        ...['Unread', 'In Progress', 'Completed'].map(
-                            (status) => _buildFilterChip(
-                                status,
-                                _selectedStatuses.contains(status),
-                                () => _toggleStatus(status))),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Your Library',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark
+                                        ? Colors.white
+                                        : const Color(0xFF0F172A),
+                                  ),
+                            ),
+                            Text(
+                              'Manage and read your German texts',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: isDark
+                                        ? Colors.grey.shade400
+                                        : Colors.grey.shade600,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                // TODO: Implement Daily News
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Daily News coming soon')),
+                                );
+                              },
+                              icon: const Icon(Icons.public, size: 18),
+                              label: const Text('Daily News'),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.icon(
+                              onPressed: () => context.push('/generator'),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Text'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor:
+                                    const Color(0xFF4F46E5), // Indigo
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+
+                    // Tabs
+                    Row(
+                      children: [
+                        _buildTab('My Library', 'private'),
+                        const SizedBox(width: 24),
+                        _buildTab('Public Library', 'public'),
+                      ],
+                    ),
+                    const Divider(height: 1),
+                    const SizedBox(height: 24),
+
+                    // Search Bar
+                    TextField(
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search titles or content...',
+                        prefixIcon: const Icon(Icons.search),
+                        filled: true,
+                        fillColor: isDark
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Filters
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          Text('Level:',
+                              style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500)),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('All', _selectedLevels.isEmpty,
+                              () => _toggleLevel('All')),
+                          ...['A1', 'A2', 'B1', 'B2', 'C1'].map((level) =>
+                              _buildFilterChip(
+                                  level,
+                                  _selectedLevels.contains(level),
+                                  () => _toggleLevel(level))),
+                          const SizedBox(width: 16),
+                          Container(
+                              width: 1,
+                              height: 24,
+                              color: Colors.grey.shade300),
+                          const SizedBox(width: 16),
+                          Text('Status:',
+                              style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontWeight: FontWeight.w500)),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('All', _selectedStatuses.isEmpty,
+                              () => _toggleStatus('All')),
+                          ...['Unread', 'In Progress', 'Completed'].map(
+                              (status) => _buildFilterChip(
+                                  status,
+                                  _selectedStatuses.contains(status),
+                                  () => _toggleStatus(status))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Content Grid
-          if (storiesAsync.isLoading || vocabAsync.isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (storiesAsync.hasError || vocabAsync.hasError)
-            SliverFillRemaining(
-              child: Center(
-                  child: Text(
-                      'Error loading data: ${storiesAsync.error ?? vocabAsync.error}')),
-            )
-          else
-            Builder(
-              builder: (context) {
-                final stories = storiesAsync.value ?? [];
-                final vocab = vocabAsync.value ?? [];
+            // Content Grid
+            if (storiesAsync.isLoading || vocabAsync.isLoading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (storiesAsync.hasError || vocabAsync.hasError)
+              SliverFillRemaining(
+                child: Center(
+                    child: Text(
+                        'Error loading data: ${storiesAsync.error ?? vocabAsync.error}')),
+              )
+            else
+              Builder(
+                builder: (context) {
+                  final stories = storiesAsync.value ?? [];
+                  final vocab = vocabAsync.value ?? [];
 
-                // Filter Logic
-                final filteredStories = stories.where((story) {
-                  // Search
-                  if (_searchQuery.isNotEmpty) {
-                    final query = _searchQuery.toLowerCase();
-                    if (!story.title.toLowerCase().contains(query) &&
-                        !story.content.toLowerCase().contains(query)) {
+                  // Filter Logic
+                  final filteredStories = stories.where((story) {
+                    // Search
+                    if (_searchQuery.isNotEmpty) {
+                      final query = _searchQuery.toLowerCase();
+                      if (!story.title.toLowerCase().contains(query) &&
+                          !story.content.toLowerCase().contains(query)) {
+                        return false;
+                      }
+                    }
+
+                    // Level
+                    if (_selectedLevels.isNotEmpty &&
+                        !_selectedLevels.contains(story.level)) {
                       return false;
                     }
-                  }
 
-                  // Level
-                  if (_selectedLevels.isNotEmpty &&
-                      !_selectedLevels.contains(story.level)) {
-                    return false;
-                  }
+                    // Status
+                    if (_selectedStatuses.isNotEmpty) {
+                      final stats = calculateStoryStats(story, vocab);
+                      final isUnread = !story.isRead && stats.unknownCount == 0;
+                      final isCompleted = story.isRead;
+                      final isInProgress =
+                          stats.unknownCount > 0 && !story.isRead;
 
-                  // Status
-                  if (_selectedStatuses.isNotEmpty) {
-                    final stats = calculateStoryStats(story, vocab);
-                    final isUnread = !story.isRead && stats.unknownCount == 0;
-                    final isCompleted = story.isRead;
-                    final isInProgress =
-                        stats.unknownCount > 0 && !story.isRead;
+                      bool matches = false;
+                      if (_selectedStatuses.contains('Unread') && isUnread)
+                        matches = true;
+                      if (_selectedStatuses.contains('Completed') &&
+                          isCompleted) matches = true;
+                      if (_selectedStatuses.contains('In Progress') &&
+                          isInProgress) matches = true;
 
-                    bool matches = false;
-                    if (_selectedStatuses.contains('Unread') && isUnread)
-                      matches = true;
-                    if (_selectedStatuses.contains('Completed') && isCompleted)
-                      matches = true;
-                    if (_selectedStatuses.contains('In Progress') &&
-                        isInProgress) matches = true;
-
-                    if (!matches) return false;
-                  } else {
-                    // Default behavior: Hide completed unless specifically filtered?
-                    // React logic: "Hide completed stories by default UNLESS Completed status filter is selected"
-                    if (story.isRead &&
-                        !_selectedStatuses.contains('Completed')) {
-                      return false;
+                      if (!matches) return false;
+                    } else {
+                      // Default behavior: Hide completed unless specifically filtered?
+                      // React logic: "Hide completed stories by default UNLESS Completed status filter is selected"
+                      if (story.isRead &&
+                          !_selectedStatuses.contains('Completed')) {
+                        return false;
+                      }
                     }
+
+                    return true;
+                  }).toList();
+
+                  if (filteredStories.isEmpty) {
+                    return const SliverFillRemaining(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.search_off,
+                                size: 48, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text('No stories found matching your filters'),
+                          ],
+                        ),
+                      ),
+                    );
                   }
 
-                  return true;
-                }).toList();
+                  return SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 400,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 0.85, // Adjust based on card content
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final story = filteredStories[index];
+                          final stats = calculateStoryStats(story, vocab);
 
-                if (filteredStories.isEmpty) {
-                  return const SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off, size: 48, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text('No stories found matching your filters'),
-                        ],
+                          return StoryCard(
+                            story: story,
+                            stats: stats,
+                            onToggleRead: () {
+                              // TODO: Implement toggle read in repository
+                              // For now just log
+                              print('Toggle read for ${story.id}');
+                            },
+                            onDelete: () {
+                              // TODO: Implement delete in repository
+                              print('Delete ${story.id}');
+                            },
+                          );
+                        },
+                        childCount: filteredStories.length,
                       ),
                     ),
                   );
-                }
-
-                return SliverPadding(
-                  padding: const EdgeInsets.all(16),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 400,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.85, // Adjust based on card content
-                    ),
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final story = filteredStories[index];
-                        final stats = calculateStoryStats(story, vocab);
-
-                        return StoryCard(
-                          story: story,
-                          stats: stats,
-                          onToggleRead: () {
-                            // TODO: Implement toggle read in repository
-                            // For now just log
-                            print('Toggle read for ${story.id}');
-                          },
-                          onDelete: () {
-                            // TODO: Implement delete in repository
-                            print('Delete ${story.id}');
-                          },
-                        );
-                      },
-                      childCount: filteredStories.length,
-                    ),
-                  ),
-                );
-              },
-            ),
-        ],
+                },
+              ),
+          ],
+        ),
       ),
     );
   }

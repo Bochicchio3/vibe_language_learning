@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/text_utils.dart';
 import '../../services/ai_service.dart';
 import '../../services/tts_service.dart';
 import '../../features/vocabulary/vocabulary_repository.dart';
 import '../../features/reader/widgets/interactive_text.dart';
+
+class NextChapterIntent extends Intent {
+  const NextChapterIntent();
+}
+
+class PreviousChapterIntent extends Intent {
+  const PreviousChapterIntent();
+}
 
 class SmartTextReader extends ConsumerStatefulWidget {
   final String content;
@@ -223,117 +232,146 @@ class _SmartTextReaderState extends ConsumerState<SmartTextReader> {
         ? _simplifiedContent!
         : widget.content;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        actions: [
-          if (_models.isNotEmpty)
-            IconButton(
-              icon: _isSimplifying
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : Icon(_showingSimplified ? Icons.undo : Icons.auto_fix_high),
-              tooltip: _showingSimplified ? 'Show Original' : 'Simplify Text',
-              onPressed: _isSimplifying
-                  ? null
-                  : () {
-                      if (_showingSimplified) {
-                        setState(() {
-                          _showingSimplified = false;
-                          _calculateTokenOffsets(widget.content);
-                        });
-                      } else {
-                        if (_simplifiedContent != null) {
-                          setState(() {
-                            _showingSimplified = true;
-                            _calculateTokenOffsets(_simplifiedContent!);
-                          });
-                        } else {
-                          _simplifyText();
-                        }
-                      }
-                    },
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (widget.subtitle != null) ...[
-                  Text(
-                    widget.subtitle!,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.arrowRight): const NextChapterIntent(),
+        LogicalKeySet(LogicalKeyboardKey.arrowLeft):
+            const PreviousChapterIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          NextChapterIntent: CallbackAction<NextChapterIntent>(
+            onInvoke: (NextChapterIntent intent) => widget.onNext?.call(),
+          ),
+          PreviousChapterIntent: CallbackAction<PreviousChapterIntent>(
+            onInvoke: (PreviousChapterIntent intent) =>
+                widget.onPrevious?.call(),
+          ),
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            appBar: AppBar(
+              title: Text(widget.title),
+              actions: [
+                if (_models.isNotEmpty)
+                  IconButton(
+                    icon: _isSimplifying
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : Icon(_showingSimplified
+                            ? Icons.undo
+                            : Icons.auto_fix_high),
+                    tooltip:
+                        _showingSimplified ? 'Show Original' : 'Simplify Text',
+                    onPressed: _isSimplifying
+                        ? null
+                        : () {
+                            if (_showingSimplified) {
+                              setState(() {
+                                _showingSimplified = false;
+                                _calculateTokenOffsets(widget.content);
+                              });
+                            } else {
+                              if (_simplifiedContent != null) {
+                                setState(() {
+                                  _showingSimplified = true;
+                                  _calculateTokenOffsets(_simplifiedContent!);
+                                });
+                              } else {
+                                _simplifyText();
+                              }
+                            }
+                          },
                   ),
-                  const Divider(height: 32),
-                ],
-                InteractiveText(
-                  text: displayContent,
-                  highlightedTokenIndex: _highlightedTokenIndex,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        height: 1.8,
-                        fontSize: 18,
+              ],
+            ),
+            body: Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.subtitle != null) ...[
+                        Text(
+                          widget.subtitle!,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                        ),
+                        const Divider(height: 32),
+                      ],
+                      InteractiveText(
+                        text: displayContent,
+                        highlightedTokenIndex: _highlightedTokenIndex,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              height: 1.8,
+                              fontSize: 18,
+                            ),
+                        onWordTap: (word) =>
+                            _handleWordTap(word, displayContent),
                       ),
-                  onWordTap: (word) => _handleWordTap(word, displayContent),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton.filledTonal(
+                          onPressed: widget.onPrevious,
+                          icon: const Icon(Icons.skip_previous),
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton.filled(
+                          onPressed: () async {
+                            if (_isPlaying) {
+                              await ttsService.stop();
+                              setState(() => _isPlaying = false);
+                            } else {
+                              setState(() => _isPlaying = true);
+                              await ttsService.speak(displayContent,
+                                  _getLangCode(widget.language));
+                            }
+                          },
+                          icon:
+                              Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                          iconSize: 32,
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton.filledTonal(
+                          onPressed: widget.onNext,
+                          icon: const Icon(Icons.skip_next),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, -5),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton.filledTonal(
-                    onPressed: widget.onPrevious,
-                    icon: const Icon(Icons.skip_previous),
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton.filled(
-                    onPressed: () async {
-                      if (_isPlaying) {
-                        await ttsService.stop();
-                        setState(() => _isPlaying = false);
-                      } else {
-                        setState(() => _isPlaying = true);
-                        await ttsService.speak(
-                            displayContent, _getLangCode(widget.language));
-                      }
-                    },
-                    icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                    iconSize: 32,
-                  ),
-                  const SizedBox(width: 16),
-                  IconButton.filledTonal(
-                    onPressed: widget.onNext,
-                    icon: const Icon(Icons.skip_next),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
