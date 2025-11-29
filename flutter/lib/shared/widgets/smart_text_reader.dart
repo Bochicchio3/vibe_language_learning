@@ -249,7 +249,8 @@ class _SmartTextReaderState extends ConsumerState<SmartTextReader> {
           ),
         },
         child: Focus(
-          autofocus: true,
+          autofocus:
+              false, // Prevent focus stealing on web which might cause crashes
           child: Scaffold(
             appBar: AppBar(
               title: Text(widget.title),
@@ -441,6 +442,9 @@ class _SmartTextReaderState extends ConsumerState<SmartTextReader> {
                       color: isSaved ? Colors.indigo : null,
                     ),
                     onPressed: () async {
+                      // Check if the widget is still mounted before using ref
+                      if (!mounted) return;
+
                       if (isSaved) {
                         await ref
                             .read(vocabularyRepositoryProvider)
