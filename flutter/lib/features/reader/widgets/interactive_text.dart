@@ -44,6 +44,7 @@ class InteractiveText extends StatelessWidget {
                   )
                 : null,
             recognizer: TapGestureRecognizer()..onTap = () => onWordTap(clean),
+            mouseCursor: SystemMouseCursors.click,
           );
         }).toList(),
       ),

@@ -16,7 +16,7 @@ void main() async {
       options: FirebaseOptions(
           apiKey: 'AIzaSyB12iWKLtQnrGwH62HfSB5Lb3h6aAdIP2Y',
           appId: '1:902980237738:web:c80288efef81521a2393d3',
-          messagingSenderId: 'G-8FY4SD6PZJ',
+          messagingSenderId: '902980237738',
           projectId: 'vibe-language-learning',
           authDomain: "vibe-language-learning.firebaseapp.com",
           storageBucket: "vibe-language-learning.firebasestorage.app",

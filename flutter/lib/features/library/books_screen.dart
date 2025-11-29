@@ -2,104 +2,282 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'books_repository.dart';
+import 'widgets/book_card.dart';
 
-class BooksScreen extends ConsumerWidget {
+class BooksScreen extends ConsumerStatefulWidget {
   const BooksScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final booksAsync = ref.watch(booksListProvider);
+  ConsumerState<BooksScreen> createState() => _BooksScreenState();
+}
+
+class _BooksScreenState extends ConsumerState<BooksScreen> {
+  bool _isPublicTab = false;
+  String _searchQuery = '';
+  final List<String> _selectedLevels = [];
+
+  @override
+  Widget build(BuildContext context) {
+    final booksAsync = ref.watch(booksListProvider(_isPublicTab));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Books'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            onPressed: () {
-              // TODO: Implement book import
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Import feature coming soon')),
-              );
-            },
-          ),
-        ],
-      ),
-      body: booksAsync.when(
-        data: (books) {
-          if (books.isEmpty) {
-            return const Center(
-              child: Text('No books yet. Import one!'),
-            );
-          }
-          return GridView.builder(
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              childAspectRatio: 0.7,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final book = books[index];
-              return Card(
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => context.push('/books/${book.id}'),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            title: const Text('Books Library'),
+            floating: true,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.upload_file),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Import feature coming soon')),
+                  );
+                },
+                tooltip: 'Import Book',
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(110),
+              child: Column(
+                children: [
+                  // Tabs
+                  Row(
                     children: [
                       Expanded(
-                        child: book.coverImage.isNotEmpty
-                            ? Image.network(
-                                book.coverImage,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    const Icon(Icons.book, size: 50),
-                              )
-                            : Container(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                                child: const Icon(Icons.book, size: 50),
-                              ),
+                        child: _TabButton(
+                          label: 'My Library',
+                          icon: Icons.person,
+                          isSelected: !_isPublicTab,
+                          onTap: () => setState(() => _isPublicTab = false),
+                        ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              book.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.titleSmall,
-                            ),
-                            Text(
-                              book.author,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 4),
-                            LinearProgressIndicator(
-                              value: book.totalChapters > 0
-                                  ? book.currentChapter / book.totalChapters
-                                  : 0,
-                            ),
-                          ],
+                      Expanded(
+                        child: _TabButton(
+                          label: 'Public Library',
+                          icon: Icons.public,
+                          isSelected: _isPublicTab,
+                          onTap: () => setState(() => _isPublicTab = true),
                         ),
                       ),
                     ],
                   ),
+                  // Search & Filter
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SearchBar(
+                            hintText: 'Search books...',
+                            leading: const Icon(Icons.search),
+                            elevation: WidgetStateProperty.all(0),
+                            backgroundColor: WidgetStateProperty.all(
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.5),
+                            ),
+                            onChanged: (value) =>
+                                setState(() => _searchQuery = value),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: Icon(
+                            Icons.filter_list,
+                            color: _selectedLevels.isNotEmpty
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                          onPressed: _showFilterDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          booksAsync.when(
+            data: (books) {
+              final filteredBooks = books.where((book) {
+                final matchesSearch = book.title
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase());
+                final matchesLevel = _selectedLevels.isEmpty ||
+                    _selectedLevels.contains(book.level);
+                return matchesSearch && matchesLevel;
+              }).toList();
+
+              if (filteredBooks.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.menu_book, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text('No books found'),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2, // Adaptive?
+                    childAspectRatio: 0.65,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final book = filteredBooks[index];
+                      return BookCard(
+                        book: book,
+                        isPublic: _isPublicTab,
+                        onTap: () => _onBookTap(book),
+                        primaryActionLabel:
+                            _isPublicTab ? 'Add to Library' : 'Start Reading',
+                        primaryActionIcon: _isPublicTab
+                            ? Icons.download
+                            : Icons.play_circle_outline,
+                        onPrimaryAction: () => _onBookAction(book),
+                      );
+                    },
+                    childCount: filteredBooks.length,
+                  ),
                 ),
               );
             },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (err, stack) => SliverFillRemaining(
+              child: Center(child: Text('Error: $err')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Filter by Level'),
+          content: Wrap(
+            spacing: 8,
+            children: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'].map((level) {
+              final isSelected = _selectedLevels.contains(level);
+              return FilterChip(
+                label: Text(level),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedLevels.add(level);
+                    } else {
+                      _selectedLevels.remove(level);
+                    }
+                  });
+                  // Update parent state as well to trigger rebuild
+                  this.setState(() {});
+                },
+              );
+            }).toList(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                setState(() => _selectedLevels.clear());
+                this.setState(() {});
+              },
+              child: const Text('Clear'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onBookTap(Book book) {
+    if (_isPublicTab) {
+      // Show preview or details dialog?
+      // For now just action
+      _onBookAction(book);
+    } else {
+      context.push('/books/${book.id}');
+    }
+  }
+
+  void _onBookAction(Book book) {
+    if (_isPublicTab) {
+      // TODO: Implement Add to Library
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add to Library not implemented yet')),
+      );
+    } else {
+      context.push('/book/${book.id}/read/${book.currentChapter}');
+    }
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TabButton({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.onSurfaceVariant;
+
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? color : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

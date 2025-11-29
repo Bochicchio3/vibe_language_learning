@@ -6,8 +6,9 @@ final booksRepositoryProvider = Provider<BooksRepository>((ref) {
   return BooksRepository(FirebaseFirestore.instance, FirebaseAuth.instance);
 });
 
-final booksListProvider = StreamProvider<List<Book>>((ref) {
-  return ref.watch(booksRepositoryProvider).getBooks();
+final booksListProvider =
+    StreamProvider.family<List<Book>, bool>((ref, isPublic) {
+  return ref.watch(booksRepositoryProvider).getBooks(isPublic: isPublic);
 });
 
 final bookDetailsProvider = FutureProvider.family<Book?, String>((ref, bookId) {
@@ -51,8 +52,17 @@ class Book {
               ?.map((c) => Chapter.fromMap(c))
               .toList() ??
           [],
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: _parseCreatedAt(data['createdAt']),
     );
+  }
+
+  static DateTime _parseCreatedAt(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
   }
 }
 
@@ -85,7 +95,13 @@ class BooksRepository {
 
   BooksRepository(this._firestore, this._auth);
 
-  Stream<List<Book>> getBooks() {
+  Stream<List<Book>> getBooks({bool isPublic = false}) {
+    if (isPublic) {
+      return _firestore.collection('books').snapshots().map((snapshot) {
+        return snapshot.docs.map((doc) => Book.fromFirestore(doc)).toList();
+      });
+    }
+
     final userId = _auth.currentUser?.uid;
     if (userId == null) return Stream.value([]);
 
@@ -101,17 +117,22 @@ class BooksRepository {
   }
 
   Future<Book?> getBook(String bookId) async {
+    // Try private first
     final userId = _auth.currentUser?.uid;
-    if (userId == null) return null;
+    if (userId != null) {
+      final doc = await _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('books')
+          .doc(bookId)
+          .get();
+      if (doc.exists) return Book.fromFirestore(doc);
+    }
 
-    final doc = await _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('books')
-        .doc(bookId)
-        .get();
+    // Try public
+    final publicDoc = await _firestore.collection('books').doc(bookId).get();
+    if (publicDoc.exists) return Book.fromFirestore(publicDoc);
 
-    if (!doc.exists) return null;
-    return Book.fromFirestore(doc);
+    return null;
   }
 }
