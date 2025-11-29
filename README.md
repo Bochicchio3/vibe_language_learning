@@ -38,6 +38,7 @@ Services available at:
 
 1. **Install dependencies**:
    ```bash
+   cd frontend
    npm install
    ```
 
@@ -78,6 +79,7 @@ For full functionality, run both frontend and backend:
 
 **Terminal 1 - Frontend**:
 ```bash
+cd frontend
 npm run dev
 ```
 
@@ -94,21 +96,22 @@ The frontend automatically proxies `/api` requests to the backend.
 
 ```
 vibe_language_learning/
-├── src/                    # Frontend source code
-│   ├── components/         # React components (organized by type)
-│   ├── services/           # Services (DB layer, API layer)
-│   ├── hooks/              # Custom React hooks
-│   ├── contexts/           # React contexts
-│   └── utils/              # Utility functions
+├── frontend/               # Frontend source code
+│   ├── src/                # React source code
+│   │   ├── components/     # React components
+│   │   ├── services/       # API services
+│   │   └── ...
+│   └── public/             # Static assets
 ├── backend/                # Python backend
 │   ├── services/           # Backend services (LLM, document processing, etc.)
 │   ├── routes/             # API routes
 │   └── tests/              # Backend tests
 ├── docs/                   # Documentation
-│   ├── repository_structure.md
+│   ├── getting_started/    # Getting started guides
+│   │   └── repository_structure.md
 │   ├── database_schema.md
 │   └── visual_behavior_tests.md
-└── public/                 # Static assets
+└── docker-compose.yml      # Docker orchestration
 ```
 
 ## Features
@@ -141,7 +144,7 @@ vibe_language_learning/
 
 ## Documentation
 
-- **[Repository Structure](docs/repository_structure.md)**: Detailed code organization
+- **[Repository Structure](docs/getting_started/repository_structure.md)**: Detailed code organization
 - **[Database Schema](docs/database_schema.md)**: Complete database documentation
 - **[Visual Tests](docs/visual_behavior_tests.md)**: Manual testing guide
 - **[Backend README](backend/README.md)**: Backend setup and API docs
@@ -150,6 +153,7 @@ vibe_language_learning/
 
 ### Frontend Tests
 ```bash
+cd frontend
 npm test
 ```
 
@@ -169,6 +173,7 @@ Run the visual test workflow:
 
 ### Frontend
 ```bash
+cd frontend
 npm run build
 npm run preview  # Preview production build
 ```

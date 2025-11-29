@@ -11,15 +11,21 @@ The application follows a **client-server architecture**:
 - **Queue**: Redis + Celery for background jobs
 
 ## Root Directory
-- **`vite.config.js`**: Configuration for Vite, including plugins (React) and server proxy settings (for backend API).
+- **`frontend/`**: React Frontend application.
+- **`backend/`**: Python FastAPI backend server.
+- **`docs/`**: Project documentation.
+- **`docker-compose.yml`**: Docker orchestration configuration.
+
+## Frontend Directory (`frontend/`)
+- **`vite.config.js`**: Configuration for Vite.
 - **`package.json`**: Frontend dependencies and scripts.
 - **`postcss.config.js`**: Configuration for PostCSS (used by Tailwind).
 - **`eslint.config.js`**: Linting configuration.
 - **`index.html`**: Entry point for the application.
-- **`public/`**: Static assets served directly (e.g., WASM files, samples).
-- **`backend/`**: Python FastAPI backend server.
+- **`public/`**: Static assets served directly.
+- **`src/`**: Source code.
 
-## Source Directory (`src/`)
+## Source Directory (`frontend/src/`)
 
 ### Core
 - **`main.jsx`**: Application entry point. Mounts the React app and wraps it in `BrowserRouter`.
@@ -168,14 +174,14 @@ The application follows a **client-server architecture**:
 - **`unit/`**: Unit tests for backend services.
 - **`integration/`**: Integration tests (e.g., `test_docling_real.py`).
 
-## Tests Directory (`tests/`)
+## Tests Directory (`frontend/tests/`)
 - **`unit/`**: Unit tests (e.g., `tts.test.js`).
 - **`integration/`**: Integration and pipeline tests (`test_pipeline.js`, `verify_pipeline.py`, `setup.js`).
 - **`tools/`**: Utility scripts for testing (`inspect_text.py`, `test_translation.js`).
 - **`outputs/`**: Generated test output files (gitignored).
 - **`test_runner.js`**: Main script to run all tests.
 
-## Public Directory (`public/`)
+## Public Directory (`frontend/public/`)
 - **`samples/`**: Contains seed data and test files (e.g., `ein_neues_leben.json`, `Vita_e_avventure_di_Robinson_Crusoè.pdf`).
 - **`wasm/`**: Static WASM files for TTS.
 
@@ -184,6 +190,6 @@ The application follows a **client-server architecture**:
 - **`database_schema.md`**: Complete database schema documentation.
 - **`visual_behavior_tests.md`**: Manual visual verification tests.
 
-## Scripts Directory (`scripts/`)
+## Scripts Directory (`frontend/scripts/`)
 - **`update_imports.sh`**: Script to batch update import paths after reorganization.
 

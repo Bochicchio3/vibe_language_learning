@@ -29,12 +29,12 @@ services:
   # React Frontend
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "5173:5173"
     volumes:
-      - .:/app
+      - ./frontend:/app
       - /app/node_modules
     environment:
       - VITE_API_TARGET=http://backend:8001
