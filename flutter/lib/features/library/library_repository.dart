@@ -15,6 +15,7 @@ class Story {
   final String title;
   final String level;
   final String topic;
+  final String content;
   final bool isRead;
   final DateTime createdAt;
 
@@ -23,6 +24,7 @@ class Story {
     required this.title,
     required this.level,
     required this.topic,
+    required this.content,
     required this.isRead,
     required this.createdAt,
   });
@@ -34,8 +36,9 @@ class Story {
       title: data['title'] ?? '',
       level: data['level'] ?? '',
       topic: data['topic'] ?? '',
+      content: data['content'] ?? '',
       isRead: data['isRead'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }
@@ -53,7 +56,7 @@ class LibraryRepository {
     return _firestore
         .collection('users')
         .doc(userId)
-        .collection('stories')
+        .collection('texts')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
