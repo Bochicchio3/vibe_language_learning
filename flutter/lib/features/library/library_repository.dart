@@ -6,10 +6,6 @@ final libraryRepositoryProvider = Provider<LibraryRepository>((ref) {
   return LibraryRepository(FirebaseFirestore.instance, FirebaseAuth.instance);
 });
 
-final libraryStoriesProvider = StreamProvider<List<Story>>((ref) {
-  return ref.watch(libraryRepositoryProvider).getStories();
-});
-
 class Story {
   final String id;
   final String title;
@@ -63,4 +59,20 @@ class LibraryRepository {
       return snapshot.docs.map((doc) => Story.fromFirestore(doc)).toList();
     });
   }
+
+  Stream<List<Story>> getPublicStories() {
+    return _firestore
+        .collection('texts')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => Story.fromFirestore(doc)).toList();
+    });
+  }
 }
+
+final libraryStoriesProvider =
+    StreamProvider.family<List<Story>, bool>((ref, isPublic) {
+  final repository = ref.watch(libraryRepositoryProvider);
+  return isPublic ? repository.getPublicStories() : repository.getStories();
+});
