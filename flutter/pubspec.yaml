@@ -1,0 +1,31 @@
+name: vibe_language_learning
+description: A new Flutter project for Vibe Language Learning.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.3
+  go_router: ^17.0.0
+  dio: ^5.4.0
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  flutter_tts: ^4.2.3
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  cupertino_icons: ^1.0.2
+  flutter_markdown_plus: ^1.0.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  will_it_run: ^1.0.4
+
+flutter:
+  uses-material-design: true
