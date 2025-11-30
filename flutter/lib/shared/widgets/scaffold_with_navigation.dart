@@ -52,6 +52,11 @@ class ScaffoldWithNavigation extends StatelessWidget {
                   selectedIcon: Icon(Icons.chat_bubble),
                   label: Text('Chat'),
                 ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.code_outlined),
+                  selectedIcon: Icon(Icons.code),
+                  label: Text('Rust Test'),
+                ),
               ],
             ),
             const VerticalDivider(thickness: 1, width: 1),
@@ -97,6 +102,11 @@ class ScaffoldWithNavigation extends StatelessWidget {
             icon: Icon(Icons.chat_bubble_outline),
             selectedIcon: Icon(Icons.chat_bubble),
             label: 'Chat',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.code_outlined),
+            selectedIcon: Icon(Icons.code),
+            label: 'Rust Test',
           ),
         ],
       ),

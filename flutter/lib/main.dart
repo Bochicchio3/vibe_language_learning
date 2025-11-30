@@ -1,3 +1,5 @@
+import 'package:rinf/rinf.dart';
+import 'src/bindings/bindings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app.dart';
@@ -21,6 +23,9 @@ void main() async {
           authDomain: "vibe-language-learning.firebaseapp.com",
           storageBucket: "vibe-language-learning.firebasestorage.app",
           measurementId: "G-8FY4SD6PZJ")); // until we run flutterfire configure
+
+  // Initialize Rinf
+  await initializeRust(assignRustSignal);
 
   runApp(
     const ProviderScope(

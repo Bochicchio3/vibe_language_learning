@@ -1,0 +1,44 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flutter",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/flutter"
+        },
+        {
+            "name": "Flutter Web (with WASM)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/flutter",
+            "args": [
+                "--web-browser-flag --disable-web-security --web-header=Cross-Origin-Opener-Policy=same-origin --web-header=Cross-Origin-Embedder-Policy=require-corp"
+            ]
+        },
+        {
+            "name": "Flutter (profile)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/flutter"
+        },
+        {
+            "name": "Flutter (release)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "program": "lib/main.dart",
+            "cwd": "${workspaceFolder}/flutter"
+        },
+        {
+            "name": "Flutter: Attach to Device",
+            "type": "dart",
+            "request": "attach",
+            "cwd": "${workspaceFolder}/flutter"
+        }
+    ]
+}

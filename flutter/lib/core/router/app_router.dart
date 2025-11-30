@@ -11,6 +11,7 @@ import '../../features/vocabulary/vocab_dashboard.dart';
 import '../../features/vocabulary/flashcard_screen.dart';
 import '../../features/chat/chat_screen.dart';
 import '../../features/generator/generator_screen.dart';
+import '../../features/rust_test/rust_test_screen.dart';
 
 import '../../shared/widgets/scaffold_with_navigation.dart';
 
@@ -76,6 +77,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/chat',
                 builder: (context, state) => const ChatScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/rust_test',
+                builder: (context, state) => const RustTestScreen(),
               ),
             ],
           ),
